@@ -1,6 +1,14 @@
+import '../global.scss';
 import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
-import '../global.scss';
+import { Plus_Jakarta_Sans } from 'next/font/google';
+import clsx from 'clsx';
+
+const jakartaSans = Plus_Jakarta_Sans({
+  weight: ['600', '500'],
+  style: ['normal', 'italic'],
+  subsets: ['latin'],
+});
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -14,7 +22,7 @@ export const viewport: Viewport = {
 export default function MobileLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="de">
-      <body className="dark">
+      <body className={clsx(jakartaSans.className, 'dark !bg-primary text-primary')}>
         {children}
       </body>
     </html>
