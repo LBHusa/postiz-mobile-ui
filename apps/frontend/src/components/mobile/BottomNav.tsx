@@ -30,7 +30,7 @@ const tabs = [
   {
     label: 'Vorschlaege',
     href: '/m/vorschlaege',
-    badge: 0,
+    showBadge: true,
     icon: (active: boolean) => (
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -72,11 +72,14 @@ const tabs = [
   },
 ] as const;
 
-export function BottomNav() {
+export function BottomNav({ badgeCount = 0 }: { badgeCount?: number }) {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex h-16 items-center justify-around border-t border-newBorder bg-newBgColor pb-safe">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden flex min-h-[64px] items-center justify-around border-t border-newBorder bg-newBgColor"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       {tabs.map((tab) => {
         const active = pathname.startsWith(tab.href);
         return (
@@ -90,9 +93,9 @@ export function BottomNav() {
           >
             <span className="relative">
               {tab.icon(active)}
-              {'badge' in tab && tab.badge > 0 && (
+              {'showBadge' in tab && badgeCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-btnPrimary text-[10px] font-semibold text-white">
-                  {tab.badge > 9 ? '9+' : tab.badge}
+                  {badgeCount > 9 ? '9+' : badgeCount}
                 </span>
               )}
             </span>
