@@ -13,7 +13,7 @@ We have 3 important folders
 
 - apps/backend - this is where the API code is (NESTJS)
 - apps/orchestrator - this is temporal, it's for background jobs (NESTJS) it contains all the workflows and activities
-- apps/frontend - this is the code of the frontend (Vite ReactJS)
+- apps/frontend - this is the code of the frontend (Next.js 16 App Router + React 19)
 - /libraries contains a lot of services shared between backend and orchestrator and frontend components.
 
 We are using only pnpm, don't use any other dependency manager.
@@ -22,7 +22,7 @@ Never install frontend components from npmjs, focus on writing native components
 The project uses tailwind 3, before writing any component look at:
 - /apps/frontend/src/app/colors.scss
 - /apps/frontend/src/app/global.scss
-- /apps/frontend/tailwind.config.js
+- /apps/frontend/tailwind.config.cjs
 
 All the --color-custom* are deprecated, don't use them.
 
@@ -59,3 +59,13 @@ const useCommunity = () => {
 
 - Linting of the project can run only from the root.
 - Use only pnpm.
+
+## Mobile-First Layer (Phase 1+)
+
+Mobile routes live at `apps/frontend/src/app/m/*` and use a dedicated layout that does NOT inherit the desktop sidebar/topbar.
+
+- Routes: `apps/frontend/src/app/m/kalender`, `apps/frontend/src/app/m/vorschlaege`, `apps/frontend/src/app/m/mehr`
+- Components: `apps/frontend/src/components/mobile/` (BottomNav, MobileShell, etc.)
+- Tailwind for mobile: use standard `sm/md/lg` breakpoints (mobile-first, min-width). Do NOT use the custom `mobile:` prefix (that is max-width: 1025px — desktop-first).
+- Server-Agent auth: `HUSATECH_AGENT_BASE_URL` + `HUSATECH_AGENT_TOKEN` env vars (see `.env.example`). All agent calls use `Authorization: Bearer <token>`.
+- Desktop UI (`(app)/...`) is untouched — mobile layer is fully parallel.
