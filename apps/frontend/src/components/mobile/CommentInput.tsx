@@ -34,7 +34,7 @@ export const CommentInput: FC<CommentInputProps> = ({
 
   return (
     <div
-      data-testid="comment-input"
+      data-testid="comment-input-sheet"
       className="fixed inset-0 z-[110] flex flex-col justify-end"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}

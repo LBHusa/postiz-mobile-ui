@@ -27,7 +27,7 @@
 
 ### Hooks
 - `apps/frontend/src/hooks/use-post-detail.ts` — Lädt Post via `useFetch` + SWR `/posts/:id`
-- `apps/frontend/src/hooks/use-post-mutate.ts` — Update-Funktionen (PATCH /posts/:id für body, date, status)
+- `apps/frontend/src/hooks/use-post-mutate.ts` — Update-Funktionen. **WICHTIG**: Postiz hat KEIN `PUT /api/posts/:id` für Body-Update. Korrekter Pattern: `POST /api/posts` mit existing post identifiers (siehe `apps/backend/src/api/routes/posts.controller.ts` für genauen Endpoint, oder Public-API-Pattern `POST /public/v1/posts type='update'`). Researcher hat dies in Round 3 verifiziert — siehe `.planning/codebase/public-api-deep.md`. Status-Update via `PUT /api/posts/:id/status` (NUR für draft↔schedule).
 - `apps/frontend/src/hooks/use-comments.ts` — Comments lesen + schreiben via Postiz internal API
 - `apps/frontend/src/hooks/use-media-upload.ts` — Multipart Upload via `/api/upload`
 - `apps/frontend/src/hooks/use-platform-formats.ts` — Format-Optionen pro Plattform (statisch in Phase 3, dynamisch via Server-Agent in Phase 4+)

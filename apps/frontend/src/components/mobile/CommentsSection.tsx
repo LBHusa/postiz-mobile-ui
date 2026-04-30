@@ -23,7 +23,7 @@ export const CommentsSection: FC<CommentsSectionProps> = ({ publishDate, onAddPa
         {onAddPageComment && (
           <button
             type="button"
-            data-testid="add-page-comment"
+            data-testid="comment-input-trigger"
             onClick={onAddPageComment}
             className="text-xs text-btnPrimary font-medium active:opacity-60 transition-opacity"
           >

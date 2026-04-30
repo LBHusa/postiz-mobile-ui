@@ -3,9 +3,7 @@
 import type { FC } from 'react';
 import { useState } from 'react';
 import { DateTimePicker } from './DateTimePicker';
-import { StatusPicker } from './StatusPicker';
 import { StatusDot } from './StatusDot';
-import type { MobileStatus } from '@gitroom/frontend/hooks/use-status-mapping';
 import { mapPostizState, useStatusMapping } from '@gitroom/frontend/hooks/use-status-mapping';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import type { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
@@ -15,7 +13,7 @@ interface PostPropertiesProps {
   state: string;
   integrations: Integrations[];
   onDateChange: (iso: string) => void;
-  onStatusChange: (status: MobileStatus) => void;
+  onStatusChange: () => void;
 }
 
 export const PostProperties: FC<PostPropertiesProps> = ({
@@ -26,7 +24,6 @@ export const PostProperties: FC<PostPropertiesProps> = ({
   onStatusChange,
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
   const { getConfig } = useStatusMapping();
 
   const mobileStatus = mapPostizState(state);
@@ -36,24 +33,32 @@ export const PostProperties: FC<PostPropertiesProps> = ({
 
   return (
     <div data-testid="post-properties" className="flex flex-wrap gap-2 py-2">
-      {/* Date + Time */}
+      {/* Date */}
       <button
         type="button"
-        data-testid="post-date-button"
+        data-testid="post-date"
         onClick={() => setShowDatePicker(true)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-newBgColorInner border border-newBorder active:opacity-60 transition-opacity"
       >
         <span className="text-textItemBlur text-xs">📅</span>
         <span className="text-xs text-newTextColor font-medium">{dateLabel}</span>
-        <span className="text-textItemBlur text-xs">·</span>
+      </button>
+
+      {/* Time */}
+      <button
+        type="button"
+        data-testid="post-time"
+        onClick={() => setShowDatePicker(true)}
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-newBgColorInner border border-newBorder active:opacity-60 transition-opacity"
+      >
         <span className="text-xs text-newTextColor font-medium">{timeLabel}</span>
       </button>
 
       {/* Status */}
       <button
         type="button"
-        data-testid="post-status-button"
-        onClick={() => setShowStatusPicker(true)}
+        data-testid="post-status"
+        onClick={onStatusChange}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border active:opacity-60 transition-opacity"
         style={{ backgroundColor: config.color + '18', borderColor: config.color + '44' }}
       >
@@ -65,7 +70,7 @@ export const PostProperties: FC<PostPropertiesProps> = ({
 
       {/* Platform logos */}
       {integrations.length > 0 && (
-        <div className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-newBgColorInner border border-newBorder">
+        <div data-testid="post-platforms" className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-newBgColorInner border border-newBorder">
           {integrations.slice(0, 3).map((i) => (
             <img
               key={i.id}
@@ -88,14 +93,6 @@ export const PostProperties: FC<PostPropertiesProps> = ({
           value={publishDate}
           onConfirm={onDateChange}
           onClose={() => setShowDatePicker(false)}
-        />
-      )}
-
-      {showStatusPicker && (
-        <StatusPicker
-          current={mobileStatus}
-          onSelect={onStatusChange}
-          onClose={() => setShowStatusPicker(false)}
         />
       )}
     </div>

@@ -1,11 +1,10 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePostDetail } from '@gitroom/frontend/hooks/use-post-detail';
 import { usePostMutate } from '@gitroom/frontend/hooks/use-post-mutate';
 import { mapPostizState } from '@gitroom/frontend/hooks/use-status-mapping';
-import type { MobileStatus } from '@gitroom/frontend/hooks/use-status-mapping';
 import { PostTitle } from './PostTitle';
 import { PostProperties } from './PostProperties';
 import { PostBodyEditor } from './PostBodyEditor';
@@ -18,6 +17,7 @@ import { StatusPicker } from './StatusPicker';
 import { PostActionBar } from './PostActionBar';
 import { AdaptForButton } from './AdaptForButton';
 import { useComments } from '@gitroom/frontend/hooks/use-comments';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 import type { PostMedia } from '@gitroom/frontend/hooks/use-post-detail';
 
 interface MobilePostDetailProps {
@@ -26,6 +26,7 @@ interface MobilePostDetailProps {
 
 export function MobilePostDetail({ postId }: MobilePostDetailProps) {
   const router = useRouter();
+  const toaster = useToaster();
   const { data: post, mutate, isLoading } = usePostDetail(postId);
   const mutators = usePostMutate(postId, mutate);
 
@@ -36,13 +37,15 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
     post ? [post.integration.id] : []
   );
 
+  const prevContentRef = useRef<string>('');
+
   // Overlay state
   const [showPageComment, setShowPageComment] = useState(false);
   const [showMediaComment, setShowMediaComment] = useState(false);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
-  // Title is the first line of the post's first value content
+  // Title is derived from the first line of content (UI-only, no separate title field in Postiz)
   const rawContent = post?.value?.[0]?.content ?? '';
   const lines = rawContent.split('\n');
   const title = lines[0]?.replace(/<[^>]+>/g, '') ?? '';
@@ -51,45 +54,51 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
   const media: PostMedia[] = post?.value?.[0]?.media ?? [];
 
   const handleTitleChange = useCallback(
-    (newTitle: string) => {
+    async (newTitle: string) => {
+      prevContentRef.current = rawContent;
       const newContent = [newTitle, ...lines.slice(1)].join('\n');
-      mutators.updateContent(newContent);
+      try {
+        await mutators.updateContent(newContent);
+      } catch {
+        mutate();
+      }
     },
-    [lines, mutators]
+    [lines, mutators, rawContent, mutate]
   );
 
   const handleBodyChange = useCallback(
-    (html: string) => {
+    async (html: string) => {
+      prevContentRef.current = rawContent;
       const newContent = lines[0] ? `${lines[0]}\n${html}` : html;
-      mutators.updateContent(newContent);
+      try {
+        await mutators.updateContent(newContent);
+      } catch {
+        // updateContent throws by design (Phase-3 stub) — re-fetch to revert any optimistic UI.
+        // When Phase 5 wires the server-agent, this same path handles real network failures.
+        mutate();
+      }
     },
-    [lines, mutators]
+    [lines, mutators, rawContent, mutate]
   );
 
   const handleMediaChange = useCallback(
     (newMedia: PostMedia[]) => {
-      // Optimistic local state — full save happens via updateContent
       mutate();
-      void newMedia; // media stored via separate upload endpoint
+      void newMedia;
     },
     [mutate]
-  );
-
-  const handleStatusChange = useCallback(
-    (status: MobileStatus) => {
-      mutators.updateStatus(status);
-    },
-    [mutators]
   );
 
   const handlePublish = useCallback(async () => {
     setPublishing(true);
     try {
-      await mutators.updateStatus('scheduled');
+      await mutators.schedulePost(publishDate);
+    } catch {
+      toaster.show('Fehler beim Einplanen', 'warning');
     } finally {
       setPublishing(false);
     }
-  }, [mutators]);
+  }, [mutators, publishDate, toaster]);
 
   const handleAddPageComment = useCallback(
     async (content: string) => {
@@ -106,7 +115,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
   );
 
   const handleImageTap = useCallback(() => {
-    // Scroll to media block — the file input is inside MediaBlock
+    // Scroll to media block — file input is inside MediaBlock
   }, []);
 
   const handleVideoTap = useCallback(() => {
@@ -133,7 +142,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
 
   return (
     <div data-testid="mobile-post-detail" className="flex flex-col pb-[80px]">
-      {/* Inline sub-header with back button + overflow menu */}
+      {/* Inline sub-header with back button */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-newBorder">
         <button
           type="button"
@@ -163,7 +172,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
           state={post.state}
           integrations={[post.integration]}
           onDateChange={mutators.updateDate}
-          onStatusChange={handleStatusChange}
+          onStatusChange={() => setShowStatusPicker(true)}
         />
 
         {/* Body */}
@@ -173,7 +182,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
         />
 
         {/* Media */}
-        {(media.length > 0 || true) && (
+        {media.length > 0 && (
           <MediaBlock
             media={media}
             onMediaChange={handleMediaChange}
@@ -231,7 +240,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
       {showStatusPicker && (
         <StatusPicker
           current={mobileStatus}
-          onSelect={handleStatusChange}
+          onSelect={() => setShowStatusPicker(false)}
           onClose={() => setShowStatusPicker(false)}
         />
       )}

@@ -9,11 +9,12 @@ interface MediaCommentInputProps {
 }
 
 export const MediaCommentInput: FC<MediaCommentInputProps> = ({ onSubmit, onClose }) => (
-  <CommentInput
-    data-testid="media-comment-input"
-    onSubmit={onSubmit}
-    onClose={onClose}
-    title="Bild kommentieren"
-    placeholder="Kommentar zum Bild…"
-  />
+  <div data-testid="media-comment-sheet">
+    <CommentInput
+      onSubmit={onSubmit}
+      onClose={onClose}
+      title="Bild kommentieren"
+      placeholder="Kommentar zum Bild…"
+    />
+  </div>
 );

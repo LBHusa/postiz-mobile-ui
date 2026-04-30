@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import { useCallback, useState } from 'react';
 import { PlatformCard } from './PlatformCard';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
+import type { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 
 interface PlatformListProps {
   selectedIds: string[];
@@ -14,7 +15,7 @@ export const PlatformList: FC<PlatformListProps> = ({ selectedIds, onSelectionCh
   const { data: integrations = [] } = useIntegrationList();
   const [formats, setFormats] = useState<Record<string, string>>({});
 
-  const active = integrations.filter((i: { disabled?: boolean }) => !i.disabled);
+  const active = (integrations as Integrations[]).filter((i) => !i.disabled);
 
   const handleToggle = useCallback(
     (id: string) => {
@@ -36,7 +37,7 @@ export const PlatformList: FC<PlatformListProps> = ({ selectedIds, onSelectionCh
       <h3 className="text-xs font-semibold text-textItemBlur uppercase tracking-wide px-0.5">
         Plattformen
       </h3>
-      {active.map((integration: { id: string; identifier: string; name: string; picture: string; disabled?: boolean; inBetweenSteps: boolean; editor: 'none' | 'normal' | 'markdown' | 'html'; display: string; type: string; changeProfilePicture: boolean; additionalSettings: string; changeNickName: boolean; time: { time: number }[] }) => (
+      {active.map((integration: Integrations) => (
         <PlatformCard
           key={integration.id}
           integration={integration}

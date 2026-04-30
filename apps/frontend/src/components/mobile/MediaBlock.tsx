@@ -44,6 +44,7 @@ export const MediaBlock: FC<MediaBlockProps> = ({ media, onMediaChange, onCommen
         <div className="relative w-full aspect-[4/5]">
           {primaryMedia.path.match(/\.(mp4|webm|mov)$/i) ? (
             <video
+              data-testid="media-item"
               src={primaryMedia.path}
               className="w-full h-full object-cover"
               controls={false}
@@ -51,6 +52,7 @@ export const MediaBlock: FC<MediaBlockProps> = ({ media, onMediaChange, onCommen
             />
           ) : (
             <img
+              data-testid="media-item"
               src={primaryMedia.thumbnail ?? primaryMedia.path}
               alt="Media"
               className="w-full h-full object-cover"
@@ -80,7 +82,7 @@ export const MediaBlock: FC<MediaBlockProps> = ({ media, onMediaChange, onCommen
       <div className="flex items-center gap-2 p-3">
         <button
           type="button"
-          data-testid="media-ai-button"
+          data-testid="media-ki-generate"
           onClick={handleKiGenerate}
           className={clsx(
             'flex-1 flex items-center justify-center gap-1.5 rounded-lg py-2.5',
@@ -94,7 +96,7 @@ export const MediaBlock: FC<MediaBlockProps> = ({ media, onMediaChange, onCommen
 
         <button
           type="button"
-          data-testid="media-upload-button"
+          data-testid="media-upload"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
           className={clsx(

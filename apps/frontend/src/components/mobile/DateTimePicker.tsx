@@ -24,7 +24,7 @@ export const DateTimePicker: FC<DateTimePickerProps> = ({ value, onConfirm, onCl
 
   return (
     <div
-      data-testid="date-time-picker"
+      data-testid="datetime-picker"
       className="fixed inset-0 z-[110] flex flex-col justify-end"
       style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}

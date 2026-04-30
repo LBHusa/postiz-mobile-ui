@@ -83,8 +83,10 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     await page.locator('[data-testid="mobile-post-detail"]').waitFor({ timeout: 8000 });
     const props = page.locator('[data-testid="post-properties"]');
     await expect(props).toBeVisible({ timeout: 5000 });
-    await expect(props.locator('[data-testid="post-date-button"]')).toBeVisible();
-    await expect(props.locator('[data-testid="post-status-button"]')).toBeVisible();
+    await expect(props.locator('[data-testid="post-date"]')).toBeVisible();
+    await expect(props.locator('[data-testid="post-time"]')).toBeVisible();
+    await expect(props.locator('[data-testid="post-status"]')).toBeVisible();
+    await expect(props.locator('[data-testid="post-platforms"]')).toBeVisible();
   });
 
   // AC4: Date tap opens DateTimePicker
@@ -95,8 +97,8 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     if (!navigated) return;
 
     await page.locator('[data-testid="post-properties"]').waitFor({ timeout: 8000 });
-    await page.locator('[data-testid="post-date-button"]').click();
-    await expect(page.locator('[data-testid="date-time-picker"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="post-date"]').click();
+    await expect(page.locator('[data-testid="datetime-picker"]')).toBeVisible({ timeout: 3000 });
   });
 
   // AC5: Status tap opens StatusPicker with 8 states
@@ -107,7 +109,7 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     if (!navigated) return;
 
     await page.locator('[data-testid="post-properties"]').waitFor({ timeout: 8000 });
-    await page.locator('[data-testid="post-status-button"]').click();
+    await page.locator('[data-testid="post-status"]').click();
     await expect(page.locator('[data-testid="status-picker"]')).toBeVisible({ timeout: 3000 });
 
     const states = ['idea', 'draft', 're_gen', 'approved', 'scheduled', 'online', 'failed', 'proposal'];
@@ -137,8 +139,8 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     await page.locator('[data-testid="mobile-post-detail"]').waitFor({ timeout: 8000 });
     const mediaBlock = page.locator('[data-testid="media-block"]');
     await expect(mediaBlock).toBeVisible({ timeout: 5000 });
-    await expect(mediaBlock.locator('[data-testid="media-ai-button"]')).toBeVisible();
-    await expect(mediaBlock.locator('[data-testid="media-upload-button"]')).toBeVisible();
+    await expect(mediaBlock.locator('[data-testid="media-ki-generate"]')).toBeVisible();
+    await expect(mediaBlock.locator('[data-testid="media-upload"]')).toBeVisible();
   });
 
   // AC8: KI button shows Phase 5 toast
@@ -148,8 +150,8 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     const navigated = await openFirstPost(page);
     if (!navigated) return;
 
-    await page.locator('[data-testid="media-ai-button"]').waitFor({ timeout: 8000 });
-    await page.locator('[data-testid="media-ai-button"]').click();
+    await page.locator('[data-testid="media-ki-generate"]').waitFor({ timeout: 8000 });
+    await page.locator('[data-testid="media-ki-generate"]').click();
     // Toast should appear (any visible text about Phase 5 or KI)
     // Toaster appears as a transient element — we just verify no crash
   });
@@ -180,7 +182,7 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     // Toggle first card on then expand
     const firstToggle = cards.first().locator('[data-testid="platform-toggle"]');
     await firstToggle.click();
-    const expandBtn = cards.first().locator('[data-testid="platform-expand"]');
+    const expandBtn = cards.first().locator('[data-testid="platform-card-expand"]');
     const expandVisible = await expandBtn.isVisible({ timeout: 1000 }).catch(() => false);
     if (expandVisible) {
       await expandBtn.click();
@@ -198,7 +200,7 @@ test.describe('Phase 3 — MobilePostDetail', () => {
 
     await page.locator('[data-testid="mobile-post-detail"]').waitFor({ timeout: 8000 });
     await expect(page.locator('[data-testid="comments-section"]')).toBeVisible({ timeout: 5000 });
-    await expect(page.locator('[data-testid="add-page-comment"]')).toBeVisible();
+    await expect(page.locator('[data-testid="comment-input-trigger"]')).toBeVisible();
   });
 
   // AC12: Page comment opens CommentInput sheet
@@ -208,9 +210,9 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     const navigated = await openFirstPost(page);
     if (!navigated) return;
 
-    await page.locator('[data-testid="add-page-comment"]').waitFor({ timeout: 8000 });
-    await page.locator('[data-testid="add-page-comment"]').click();
-    await expect(page.locator('[data-testid="comment-input"]')).toBeVisible({ timeout: 3000 });
+    await page.locator('[data-testid="comment-input-trigger"]').waitFor({ timeout: 8000 });
+    await page.locator('[data-testid="comment-input-trigger"]').click();
+    await expect(page.locator('[data-testid="comment-input-sheet"]')).toBeVisible({ timeout: 3000 });
   });
 
   // AC13: Media comment opens MediaCommentInput
@@ -222,7 +224,7 @@ test.describe('Phase 3 — MobilePostDetail', () => {
 
     await page.locator('[data-testid="media-comment-button"]').waitFor({ timeout: 8000 });
     await page.locator('[data-testid="media-comment-button"]').click();
-    await expect(page.locator('[data-testid="comment-input"]')).toBeVisible({ timeout: 3000 });
+    await expect(page.locator('[data-testid="media-comment-sheet"]')).toBeVisible({ timeout: 3000 });
   });
 
   // AC14: AdaptForButton stub

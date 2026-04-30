@@ -47,6 +47,7 @@ export const StatusPicker: FC<StatusPickerProps> = ({ current, onSelect, onClose
                 key={s.value}
                 type="button"
                 data-testid={`status-option-${s.value}`}
+                data-status-option="true"
                 onClick={() => { onSelect(s.value as MobileStatus); onClose(); }}
                 className={clsx(
                   'flex items-center gap-3 px-4 py-3.5',

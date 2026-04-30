@@ -28,6 +28,7 @@ export const PlatformCard: FC<PlatformCardProps> = ({
     <div
       data-testid="platform-card"
       data-integration-id={integration.id}
+      data-active={selected ? 'true' : 'false'}
       className={clsx(
         'rounded-xl border transition-colors',
         selected ? 'border-btnPrimary bg-newBgColorInner' : 'border-newBorder bg-newBgColor'
@@ -70,7 +71,7 @@ export const PlatformCard: FC<PlatformCardProps> = ({
         {selected && (
           <button
             type="button"
-            data-testid="platform-expand"
+            data-testid="platform-card-expand"
             onClick={() => setExpanded((v) => !v)}
             className="p-1 text-textItemBlur active:opacity-60 transition-all"
           >
@@ -98,12 +99,13 @@ export const PlatformCard: FC<PlatformCardProps> = ({
           {formats.formatOptions.length > 1 && (
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-medium text-textItemBlur uppercase tracking-wide">Format</span>
-              <div className="flex flex-wrap gap-1.5">
+              <div data-testid="platform-format-options" className="flex flex-wrap gap-1.5">
                 {formats.formatOptions.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
-                    data-testid={`format-option-${opt.value}`}
+                    data-testid="format-option"
+                    data-format-value={opt.value}
                     onClick={() => onFormatChange(integration.id, opt.value)}
                     className={clsx(
                       'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',

@@ -13,7 +13,7 @@ import { History } from '@tiptap/extension-history';
 
 // Prevent bold+underline co-existing (mirrors desktop editor behavior)
 const InterceptBoldShortcut = Extension.create({
-  name: 'mobileBoldShortcut',
+  name: 'preventBoldWithUnderline',
   addKeyboardShortcuts() {
     return {
       'Mod-b': () => {
@@ -71,7 +71,7 @@ export const PostBodyEditor: FC<PostBodyEditorProps> = ({
     <div data-testid="post-body-editor" className="flex flex-col gap-2">
       {/* Minimal mobile toolbar */}
       {!readOnly && (
-        <div className="flex items-center gap-1 border-b border-newBorder pb-2">
+        <div data-testid="post-body-toolbar" className="flex items-center gap-1 border-b border-newBorder pb-2">
           <button
             type="button"
             onMouseDown={(e) => { e.preventDefault(); toggleBold(); }}
