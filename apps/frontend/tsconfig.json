@@ -16,7 +16,8 @@
         "name": "next"
       }
     ],
-    "types": ["node"]
+    "types": ["node", "@serwist/next/typings"],
+    "lib": ["dom", "dom.iterable", "esnext", "webworker"]
   },
   "include": [
     "**/*.ts",

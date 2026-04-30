@@ -62,10 +62,14 @@ const useCommunity = () => {
 
 ## Mobile-First Layer (Phase 1+)
 
-Mobile routes live at `apps/frontend/src/app/m/*` and use a dedicated layout that does NOT inherit the desktop sidebar/topbar.
+Mobile routes live at `apps/frontend/src/app/(app)/m/*`. They live INSIDE the `(app)` route group to inherit the root layout (`<html>`/`<body>`, Plus_Jakarta_Sans font, Sentry, Plausible, PHProvider, VariableContextComponent, FetchWrapperComponent, ChangeDirClient). The mobile `layout.tsx` only swaps the desktop chrome (sidebar+topbar) for a mobile shell (top header + bottom tab bar) and mounts a smaller provider subset.
 
-- Routes: `apps/frontend/src/app/m/kalender`, `apps/frontend/src/app/m/vorschlaege`, `apps/frontend/src/app/m/mehr`
+- Routes: `apps/frontend/src/app/(app)/m/kalender`, `apps/frontend/src/app/(app)/m/vorschlaege`, `apps/frontend/src/app/(app)/m/mehr`
+- URL paths remain `/m/kalender`, `/m/vorschlaege`, `/m/mehr` — `(app)` is URL-transparent
 - Components: `apps/frontend/src/components/mobile/` (BottomNav, MobileShell, etc.)
-- Tailwind for mobile: use standard `sm/md/lg` breakpoints (mobile-first, min-width). Do NOT use the custom `mobile:` prefix (that is max-width: 1025px — desktop-first).
+- `(app)/m/layout.tsx` is a Client Component (`'use client'`) with Provider-Set: `ContextWrapper` + `MantineWrapper` + `Toaster` + `CheckPayment` + `PreConditionComponent` + `MobileShell`. Do NOT add `<html>`/`<body>` here — those are in `(app)/layout.tsx`.
+- `viewport` export and iOS PWA meta tags (`apple-mobile-web-app-capable`, `apple-mobile-web-app-status-bar-style: black-translucent`, `apple-mobile-web-app-title`, `apple-touch-icon`) live in `(app)/layout.tsx` — Server Component requirement.
+- Tailwind for mobile: use standard `sm/md/lg/xl/2xl` breakpoints (mobile-first, min-width). Do NOT use the custom `mobile:` prefix (that is max-width: 1025px — desktop-first).
+- PWA: `apps/frontend/src/app/manifest.ts` with `start_url: '/m/kalender'`, `scope: '/m/'`, `id: '/m/'`, maskable icon variant. Service-Worker via `@serwist/next` (Phase 1 V1: minimal default cache, no offline pages).
 - Server-Agent auth: `HUSATECH_AGENT_BASE_URL` + `HUSATECH_AGENT_TOKEN` env vars (see `.env.example`). All agent calls use `Authorization: Bearer <token>`.
-- Desktop UI (`(app)/...`) is untouched — mobile layer is fully parallel.
+- Desktop UI (`(app)/(site)/...`) is untouched — mobile layer is parallel under same `(app)` root, sharing all root providers.

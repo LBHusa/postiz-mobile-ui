@@ -12,5 +12,9 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@serwist/next": "9.5.10",
+    "serwist": "^9.5.10"
+  }
 }
