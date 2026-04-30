@@ -10,11 +10,29 @@ interface StatusPickerProps {
   current: MobileStatus;
   onSelect: (status: MobileStatus) => void;
   onClose: () => void;
+  postId?: string;
+  onTriggerRegen?: (postId: string) => Promise<void>;
 }
 
-export const StatusPicker: FC<StatusPickerProps> = ({ current, onSelect, onClose }) => {
+export const StatusPicker: FC<StatusPickerProps> = ({
+  current,
+  onSelect,
+  onClose,
+  postId,
+  onTriggerRegen,
+}) => {
   const states = useStatusStates();
   const { getConfig } = useStatusMapping();
+
+  const handleSelect = async (value: MobileStatus) => {
+    if (value === 're_gen' && postId && onTriggerRegen) {
+      onClose();
+      await onTriggerRegen(postId);
+      return;
+    }
+    onSelect(value);
+    onClose();
+  };
 
   return (
     <div
@@ -42,13 +60,14 @@ export const StatusPicker: FC<StatusPickerProps> = ({ current, onSelect, onClose
           {states.map((s) => {
             const config = getConfig(s.value as MobileStatus);
             const isSelected = current === s.value;
+            const isRegen = s.value === 're_gen';
             return (
               <button
                 key={s.value}
                 type="button"
                 data-testid={`status-option-${s.value}`}
                 data-status-option="true"
-                onClick={() => { onSelect(s.value as MobileStatus); onClose(); }}
+                onClick={() => { void handleSelect(s.value as MobileStatus); }}
                 className={clsx(
                   'flex items-center gap-3 px-4 py-3.5',
                   'border-b border-newBorder last:border-0',
@@ -57,14 +76,18 @@ export const StatusPicker: FC<StatusPickerProps> = ({ current, onSelect, onClose
                 )}
               >
                 <span
-                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  className={clsx(
+                    'w-3 h-3 rounded-full flex-shrink-0',
+                    isRegen && 'animate-pulse'
+                  )}
                   style={{ backgroundColor: config.color }}
                 />
                 <span className={clsx(
-                  'text-sm font-medium',
+                  'text-sm font-medium flex items-center gap-1.5',
                   isSelected ? 'text-newTextColor' : 'text-textItemBlur'
                 )}>
                   {config.label}
+                  {isRegen && <span className="text-[10px] opacity-70">↻</span>}
                 </span>
                 {isSelected && (
                   <span className="ml-auto text-btnPrimary text-xs">✓</span>

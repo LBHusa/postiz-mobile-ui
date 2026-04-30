@@ -9,11 +9,39 @@ import { Toaster } from '@gitroom/react/toaster/toaster';
 import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment';
 import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-condition.component';
 import { MobileShell } from '@gitroom/frontend/components/mobile/MobileShell';
+import { RegenContext, useRegenStateValue } from '@gitroom/frontend/hooks/use-regen-state';
 import { useSearchParams } from 'next/navigation';
+import type { User } from '@prisma/client';
+
+type ContextUser = User & {
+  orgId: string;
+  tier: 'FREE' | 'STANDARD' | 'PRO' | 'ULTIMATE' | 'TEAM';
+  role: 'USER' | 'ADMIN' | 'SUPERADMIN';
+  publicApi: string;
+  totalChannels: number;
+};
+
+function MobileLayoutInner({ children, user, mutate }: { children: ReactNode; user: ContextUser; mutate: () => void }) {
+  const searchParams = useSearchParams();
+  const regenValue = useRegenStateValue();
+
+  return (
+    <ContextWrapper user={user}>
+      <MantineWrapper>
+        <Toaster />
+        <RegenContext.Provider value={regenValue}>
+          <CheckPayment check={searchParams.get('check') || ''} mutate={mutate}>
+            <PreConditionComponent />
+            <MobileShell title="Kalender">{children}</MobileShell>
+          </CheckPayment>
+        </RegenContext.Provider>
+      </MantineWrapper>
+    </ContextWrapper>
+  );
+}
 
 export default function MobileLayout({ children }: { children: ReactNode }) {
   const fetch = useFetch();
-  const searchParams = useSearchParams();
   const load = useCallback(
     async (path: string) => {
       return await (await fetch(path)).json();
@@ -30,15 +58,6 @@ export default function MobileLayout({ children }: { children: ReactNode }) {
 
   if (!user) return null;
 
-  return (
-    <ContextWrapper user={user}>
-      <MantineWrapper>
-        <Toaster />
-        <CheckPayment check={searchParams.get('check') || ''} mutate={mutate}>
-          <PreConditionComponent />
-          <MobileShell title="Kalender">{children}</MobileShell>
-        </CheckPayment>
-      </MantineWrapper>
-    </ContextWrapper>
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return <MobileLayoutInner user={user as ContextUser} mutate={mutate}>{children}</MobileLayoutInner>;
 }

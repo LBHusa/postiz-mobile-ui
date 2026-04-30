@@ -242,6 +242,8 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
           current={mobileStatus}
           onSelect={() => setShowStatusPicker(false)}
           onClose={() => setShowStatusPicker(false)}
+          postId={postId}
+          onTriggerRegen={mutators.triggerRegen}
         />
       )}
     </div>
