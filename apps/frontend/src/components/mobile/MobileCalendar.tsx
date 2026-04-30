@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import clsx from 'clsx';
 import {
   CalendarContext,
@@ -14,7 +15,6 @@ import { MobileCalendarMonth } from './MobileCalendarMonth';
 import { MobileCalendarWeek } from './MobileCalendarWeek';
 import { DaySheet } from './DaySheet';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
-import { useToaster } from '@gitroom/react/toaster/toaster';
 
 // Computes the ISO date range for a given reference date + view mode.
 function computeRange(refDate: string, view: 'month' | 'week') {
@@ -83,7 +83,6 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
   const { proposals } = useMobileProposals();
   const { view } = useMobileCalendarConfig();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const toaster = useToaster();
 
   // Mark render complete for AC14 Playwright performance measurement.
   useEffect(() => {
@@ -124,11 +123,13 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
     (a, b) => new Date(a.publishDate).getTime() - new Date(b.publishDate).getTime()
   );
 
+  const router = useRouter();
+
   const handlePostPress = useCallback(
-    (_id: string) => {
-      toaster.show('Detail-Ansicht kommt in Phase 3', 'warning');
+    (id: string) => {
+      router.push(`/m/post/${id}`);
     },
-    [toaster]
+    [router]
   );
 
   return (
