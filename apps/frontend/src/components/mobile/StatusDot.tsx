@@ -11,11 +11,13 @@ export const StatusDot: FC<StatusDotProps> = ({ status, size = 8 }) => {
   const { getConfig } = useStatusMapping();
   const config = getConfig(status);
   const isProposal = status === 'proposal';
+  const isReGen = status === 're_gen';
 
   return (
     <span
       data-testid="status-dot"
       data-status={status}
+      className={isReGen ? 'animate-pulse' : undefined}
       style={{
         display: 'inline-block',
         width: size,

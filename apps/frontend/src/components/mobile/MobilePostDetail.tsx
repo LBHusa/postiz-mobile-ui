@@ -133,7 +133,21 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
 
   return (
     <div data-testid="mobile-post-detail" className="flex flex-col pb-[80px]">
-      {/* Back button is in MobileShell header — rendered via slot in page.tsx */}
+      {/* Inline sub-header with back button + overflow menu */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-newBorder">
+        <button
+          type="button"
+          data-testid="post-detail-back"
+          onClick={() => router.back()}
+          className="flex items-center gap-1.5 text-btnPrimary text-sm font-medium active:opacity-60 transition-opacity"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="10 4 6 8 10 12" />
+          </svg>
+          Zurück
+        </button>
+        <span className="text-xs text-textItemBlur capitalize">{post.integration.identifier}</span>
+      </div>
 
       <div className="px-4 pt-4 pb-6 flex flex-col gap-6">
         {/* Title */}
