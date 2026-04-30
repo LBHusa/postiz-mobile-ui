@@ -36,7 +36,7 @@ export default function MobileLayout({ children }: { children: ReactNode }) {
         <Toaster />
         <CheckPayment check={searchParams.get('check') || ''} mutate={mutate}>
           <PreConditionComponent />
-          <MobileShell>{children}</MobileShell>
+          <MobileShell title="Kalender">{children}</MobileShell>
         </CheckPayment>
       </MantineWrapper>
     </ContextWrapper>
