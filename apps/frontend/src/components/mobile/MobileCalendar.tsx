@@ -1,8 +1,12 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import clsx from 'clsx';
-import { CalendarWeekProvider, useCalendar } from '@gitroom/frontend/components/launches/calendar.context';
+import {
+  CalendarContext,
+  CalendarWeekProvider,
+  useCalendar,
+} from '@gitroom/frontend/components/launches/calendar.context';
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useMobileCalendarConfig } from '@gitroom/frontend/hooks/use-mobile-calendar-config';
 import { useMobileProposals } from '@gitroom/frontend/hooks/use-mobile-proposals';
@@ -12,13 +16,81 @@ import { DaySheet } from './DaySheet';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 
-// Inner component that consumes the CalendarContext
-function CalendarInner() {
-  const { posts, integrations, startDate, loading } = useCalendar();
+// Computes the ISO date range for a given reference date + view mode.
+function computeRange(refDate: string, view: 'month' | 'week') {
+  const d = newDayjs(refDate);
+  if (view === 'month') {
+    return {
+      startDate: d.startOf('month').format('YYYY-MM-DD'),
+      endDate: d.endOf('month').format('YYYY-MM-DD'),
+      display: 'month' as const,
+    };
+  }
+  return {
+    startDate: d.startOf('isoWeek').format('YYYY-MM-DD'),
+    endDate: d.endOf('isoWeek').format('YYYY-MM-DD'),
+    display: 'week' as const,
+  };
+}
+
+// Wraps CalendarContext and overrides setFilters so it never touches the URL,
+// then propagates the new date range to the real context's internal SWR key.
+function MobileCalendarContextPatch({
+  children,
+  onNavigate,
+}: {
+  children: React.ReactNode;
+  onNavigate: (startDate: string, endDate: string, display: 'month' | 'week') => void;
+}) {
+  const realCtx = useContext(CalendarContext);
+
+  const patchedSetFilters = useCallback(
+    (filters: {
+      startDate: string;
+      endDate: string;
+      display: 'week' | 'month' | 'day' | 'list';
+      customer: string | null;
+    }) => {
+      // Call the real setFilters to drive SWR refetch — it writes to URL,
+      // so we immediately restore the correct mobile URL after it runs.
+      realCtx.setFilters(filters);
+      // Restore the URL to /m/kalender (the replaceState in setFiltersWrapper
+      // already fired synchronously above, so we overwrite it back).
+      window.history.replaceState(null, '', '/m/kalender');
+      onNavigate(
+        filters.startDate,
+        filters.endDate,
+        (filters.display === 'month' || filters.display === 'week')
+          ? filters.display
+          : 'month'
+      );
+    },
+    [realCtx, onNavigate]
+  );
+
+  const patchedCtx = { ...realCtx, setFilters: patchedSetFilters };
+
+  return (
+    <CalendarContext.Provider value={patchedCtx}>
+      {children}
+    </CalendarContext.Provider>
+  );
+}
+
+// Inner component that consumes the (patched) CalendarContext.
+function CalendarInner({ navStartDate }: { navStartDate: string }) {
+  const { posts, integrations, loading } = useCalendar();
   const { proposals } = useMobileProposals();
   const { view } = useMobileCalendarConfig();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const toaster = useToaster();
+
+  // Mark render complete for AC14 Playwright performance measurement.
+  useEffect(() => {
+    if (!loading) {
+      performance.mark('mobile-calendar-rendered');
+    }
+  }, [loading]);
 
   const postsMapped = posts.map((p) => ({
     id: p.id,
@@ -31,14 +103,12 @@ function CalendarInner() {
     integration: { id: p.integration.id },
   }));
 
-  // Posts for the selected day's sheet
   const selectedDayPosts = selectedDate
     ? postsMapped.filter(
         (p) => newDayjs(p.publishDate).format('YYYY-MM-DD') === selectedDate
       )
     : [];
 
-  // Proposals for the selected day
   const selectedDayProposals = selectedDate
     ? proposals.filter((pr) => pr.date === selectedDate).map((pr) => ({
         id: pr.id,
@@ -72,7 +142,7 @@ function CalendarInner() {
       {!loading && view === 'month' && (
         <div className="px-2 py-2">
           <MobileCalendarMonth
-            startDate={startDate}
+            startDate={navStartDate}
             posts={postsMapped}
             proposals={proposals}
             onDayPress={setSelectedDate}
@@ -83,7 +153,7 @@ function CalendarInner() {
       {!loading && view === 'week' && (
         <div className="py-2">
           <MobileCalendarWeek
-            startDate={startDate}
+            startDate={navStartDate}
             posts={postsMapped}
             proposals={proposals}
             integrations={integrations}
@@ -103,7 +173,7 @@ function CalendarInner() {
   );
 }
 
-// View toggle button used in the header
+// View toggle — reads/writes localStorage-backed view preference.
 export function CalendarViewToggle() {
   const { view, setView } = useMobileCalendarConfig();
 
@@ -137,17 +207,22 @@ export function CalendarViewToggle() {
   );
 }
 
-// Navigation arrow buttons used in the header
-export function CalendarNavButtons() {
-  const { setFilters, startDate, endDate } = useCalendar();
+// Navigation arrows — reads from the patched context and calls patchedSetFilters,
+// which drives SWR refetch without permanently rewriting the URL.
+export function CalendarNavButtons({
+  navStartDate,
+}: {
+  navStartDate: string;
+}) {
+  const { setFilters } = useCalendar();
   const { view } = useMobileCalendarConfig();
 
   const navigate = useCallback(
     (direction: -1 | 1) => {
       const unit = view === 'month' ? 'month' : 'week';
-      const newStart = newDayjs(startDate).add(direction, unit).startOf(
-        unit === 'month' ? 'month' : 'isoWeek'
-      );
+      const newStart = newDayjs(navStartDate)
+        .add(direction, unit)
+        .startOf(unit === 'month' ? 'month' : 'isoWeek');
       const newEnd =
         unit === 'month'
           ? newStart.endOf('month')
@@ -156,11 +231,11 @@ export function CalendarNavButtons() {
       setFilters({
         startDate: newStart.format('YYYY-MM-DD'),
         endDate: newEnd.format('YYYY-MM-DD'),
-        display: unit === 'month' ? 'month' : 'week',
+        display: unit,
         customer: null,
       });
     },
-    [view, startDate, endDate, setFilters]
+    [view, navStartDate, setFilters]
   );
 
   return (
@@ -191,15 +266,15 @@ export function CalendarNavButtons() {
   );
 }
 
-// Month/week label for the header
-export function CalendarPeriodLabel() {
-  const { startDate } = useCalendar();
+// Period label — derives display text from local nav state (not from context startDate
+// which could lag behind the SWR key update).
+export function CalendarPeriodLabel({ navStartDate }: { navStartDate: string }) {
   const { view } = useMobileCalendarConfig();
 
   const label =
     view === 'month'
-      ? newDayjs(startDate).format('MMMM YYYY')
-      : `KW ${newDayjs(startDate).isoWeek()} ${newDayjs(startDate).year()}`;
+      ? newDayjs(navStartDate).format('MMMM YYYY')
+      : `KW ${newDayjs(navStartDate).isoWeek()} ${newDayjs(navStartDate).year()}`;
 
   return (
     <span data-testid="calendar-period-label" className="text-sm font-semibold text-newTextColor">
@@ -208,30 +283,45 @@ export function CalendarPeriodLabel() {
   );
 }
 
-// Sticky in-page header (inside provider context so it can read calendar state)
-function CalendarHeader() {
+// Sticky in-page header — inside the patched context so nav calls go through patchedSetFilters.
+function CalendarHeader({ navStartDate }: { navStartDate: string }) {
   return (
     <div className="sticky top-0 z-20 flex items-center justify-between px-4 py-2 bg-newBgColor border-b border-newBorder">
       <div className="flex items-center gap-2">
-        <CalendarNavButtons />
-        <CalendarPeriodLabel />
+        <CalendarNavButtons navStartDate={navStartDate} />
+        <CalendarPeriodLabel navStartDate={navStartDate} />
       </div>
       <CalendarViewToggle />
     </div>
   );
 }
 
-// Root export — mounts CalendarWeekProvider and renders CalendarInner
+// Root — owns local navigation state, mounts CalendarWeekProvider once, patches its
+// context to prevent the /launches URL side-effect, and passes navStartDate down.
 export function MobileCalendar() {
   const { data: integrations = [] } = useIntegrationList();
   const activeIntegrations = integrations.filter((i: { disabled?: boolean }) => !i.disabled);
+  const { view } = useMobileCalendarConfig();
+
+  const [navStartDate, setNavStartDate] = useState(() =>
+    computeRange(newDayjs().format('YYYY-MM-DD'), view).startDate
+  );
+
+  const handleNavigate = useCallback(
+    (startDate: string, _endDate: string, _display: 'month' | 'week') => {
+      setNavStartDate(startDate);
+    },
+    []
+  );
 
   return (
     <CalendarWeekProvider integrations={activeIntegrations}>
-      <div className="flex flex-col h-full">
-        <CalendarHeader />
-        <CalendarInner />
-      </div>
+      <MobileCalendarContextPatch onNavigate={handleNavigate}>
+        <div className="flex flex-col h-full">
+          <CalendarHeader navStartDate={navStartDate} />
+          <CalendarInner navStartDate={navStartDate} />
+        </div>
+      </MobileCalendarContextPatch>
     </CalendarWeekProvider>
   );
 }
