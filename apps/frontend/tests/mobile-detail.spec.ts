@@ -405,8 +405,10 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     expect(hasBanner || hasToast).toBe(true);
   });
 
-  // AC20: Failed save rolls back optimistic update
-  test('AC20: Failed save calls mutate() to roll back optimistic title update', async ({ page }) => {
+  // AC20: Phase-5 stub throws on body save — warning toast appears, SWR rolls back title
+  // updateContent is a deliberate Phase-3 stub that always throws. handleTitleChange catches
+  // the throw, calls mutate() to revert SWR state, and a warning toast is shown.
+  test('AC20: Body-save stub shows warning toast and SWR reverts title', async ({ page }) => {
     const postUrl = await navigateToFirstPost(page);
     if (!postUrl) { test.skip(); return; }
 
@@ -415,31 +417,20 @@ test.describe('Phase 3 — MobilePostDetail', () => {
     const titleEl = page.locator('[data-testid="post-title"]');
     const originalTitle = await titleEl.textContent();
 
-    // Block POST /posts to simulate content-save failure (correct endpoint after Issue 4 fix)
-    await page.route('**/posts', (route) => {
-      if (route.request().method() === 'POST') {
-        route.abort('failed');
-      } else {
-        route.continue();
-      }
-    });
-
     await titleEl.click();
     const titleInput = page.locator('[data-testid="post-title-input"]');
     await expect(titleInput).toBeVisible({ timeout: 3000 });
     await titleInput.fill('This Should Rollback');
     await titleInput.blur();
 
-    // Error toast should appear
-    const errorToast = page.locator('[role="alert"], [data-testid="toaster"]');
-    await expect(errorToast).toBeVisible({ timeout: 5000 });
+    // Phase-5 stub always fires a warning toast (no network needed)
+    const warningToast = page.locator('[role="alert"], [data-testid="toaster"]');
+    await expect(warningToast).toBeVisible({ timeout: 5000 });
 
-    // SWR revalidation should restore the original title
-    await page.waitForTimeout(1500);
+    // mutate() triggers SWR revalidation — title reverts to server value
+    await page.waitForTimeout(2000);
     const titleAfter = await titleEl.textContent();
     expect(titleAfter).toBe(originalTitle);
-
-    await page.unrouteAll();
   });
 
 });
