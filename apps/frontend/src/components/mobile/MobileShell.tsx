@@ -28,7 +28,12 @@ export function MobileShell({
         {headerRight && <div className="flex items-center">{headerRight}</div>}
       </header>
 
-      <main className="flex-1 overflow-y-auto pb-16">{children}</main>
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}
+      >
+        {children}
+      </main>
 
       <BottomNav badgeCount={badgeCount} />
     </div>

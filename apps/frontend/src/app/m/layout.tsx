@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Viewport } from 'next';
+import '../global.scss';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -11,5 +12,11 @@ export const viewport: Viewport = {
 };
 
 export default function MobileLayout({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return (
+    <html lang="de">
+      <body className="dark">
+        {children}
+      </body>
+    </html>
+  );
 }
