@@ -5,8 +5,8 @@ import { useToaster } from '@gitroom/react/toaster/toaster';
 
 export function useProposalActions(mutate: () => void) {
   const toaster = useToaster();
-  const agentBase = process.env.NEXT_PUBLIC_HUSATECH_AGENT_BASE_URL ?? '';
-  const agentToken = process.env.NEXT_PUBLIC_HUSATECH_AGENT_TOKEN ?? '';
+  const agentBase = process.env.NEXT_PUBLIC_POSTIZ_AGENT_BASE_URL ?? '';
+  const agentToken = process.env.NEXT_PUBLIC_POSTIZ_AGENT_TOKEN ?? '';
 
   const post = useCallback(
     async (path: string, body?: object) => {

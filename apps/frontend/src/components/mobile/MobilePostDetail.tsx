@@ -73,8 +73,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
       try {
         await mutators.updateContent(newContent);
       } catch {
-        // updateContent throws by design (Phase-3 stub) — re-fetch to revert any optimistic UI.
-        // When Phase 5 wires the server-agent, this same path handles real network failures.
+        // Network failure — re-fetch to revert optimistic UI
         mutate();
       }
     },

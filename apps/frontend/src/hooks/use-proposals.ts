@@ -23,8 +23,8 @@ export interface Proposal {
 }
 
 export function useProposals(status: ProposalStatus = 'pending') {
-  const agentBase = process.env.NEXT_PUBLIC_HUSATECH_AGENT_BASE_URL ?? '';
-  const agentToken = process.env.NEXT_PUBLIC_HUSATECH_AGENT_TOKEN ?? '';
+  const agentBase = process.env.NEXT_PUBLIC_POSTIZ_AGENT_BASE_URL ?? '';
+  const agentToken = process.env.NEXT_PUBLIC_POSTIZ_AGENT_TOKEN ?? '';
 
   const fetcher = useCallback(async (): Promise<Proposal[]> => {
     if (!agentBase) return [];

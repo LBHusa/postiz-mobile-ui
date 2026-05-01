@@ -83,17 +83,57 @@ export function usePostMutate(groupId: string, mutate: () => void) {
     [groupId, fetch, mutate, toaster]
   );
 
-  // Phase-3 stub: body mutations are handled by the Server-Agent in Phase 5.
-  // Throws so callers can roll back optimistic UI consistently.
   const updateContent = useCallback(
-    async (_content: string): Promise<void> => {
-      toaster.show(
-        'Body-Speichern via Server-Agent ist Phase 5 — vorerst ungespeichert',
-        'warning'
-      );
-      throw new Error('updateContent: Phase-5 stub — body persistence not yet wired');
+    async (content: string): Promise<void> => {
+      // 1. Fetch current post-group to extract integration + post-value ids/media/settings
+      const groupRes = await fetch(`/posts/group/${groupId}`);
+      if (!groupRes.ok) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error(`updateContent: GET /posts/group/${groupId} → HTTP ${groupRes.status}`);
+      }
+      const groupData = await groupRes.json();
+      const posts: Array<{
+        id: string;
+        integration: { id: string };
+        value: Array<{ id: string; content: string; media: Array<{ id: string; path: string }> }>;
+        settings?: unknown;
+      }> = groupData?.posts ?? [];
+
+      if (posts.length === 0) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error('updateContent: no posts in group');
+      }
+
+      const first = posts[0];
+      const updatePayload = {
+        type: 'update',
+        date: groupData?.publishDate ?? new Date().toISOString(),
+        shortLink: groupData?.shortLink ?? false,
+        tags: groupData?.tags ?? [],
+        posts: posts.map((p) => ({
+          integration: { id: p.integration.id },
+          value: p.value.map((v, idx) => ({
+            id: v.id,
+            // Only update content on the first value of the first (canonical) post
+            content: p.id === first.id && idx === 0 ? content : v.content,
+            image: v.media ?? [],
+          })),
+          settings: p.settings ?? {},
+        })),
+      };
+
+      const updateRes = await fetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify(updatePayload),
+      });
+      if (!updateRes.ok) {
+        toaster.show('Fehler beim Speichern', 'warning');
+        throw new Error(`updateContent: POST /posts → HTTP ${updateRes.status}`);
+      }
+      mutate();
+      toaster.show('Gespeichert', 'success');
     },
-    [toaster]
+    [groupId, fetch, mutate, toaster]
   );
 
   // Schedule a draft post at its current publishDate.
@@ -122,8 +162,8 @@ export function usePostMutate(groupId: string, mutate: () => void) {
 
   const triggerRegen = useCallback(
     async (postId: string, feedback?: string) => {
-      const agentBase = process.env.NEXT_PUBLIC_HUSATECH_AGENT_BASE_URL;
-      const agentToken = process.env.NEXT_PUBLIC_HUSATECH_AGENT_TOKEN;
+      const agentBase = process.env.NEXT_PUBLIC_POSTIZ_AGENT_BASE_URL;
+      const agentToken = process.env.NEXT_PUBLIC_POSTIZ_AGENT_TOKEN;
 
       if (!agentBase) {
         toaster.show('Agent-URL nicht konfiguriert', 'warning');
