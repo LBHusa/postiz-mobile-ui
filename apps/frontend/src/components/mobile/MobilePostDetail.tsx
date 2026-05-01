@@ -37,7 +37,7 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
     post ? [post.integration.id] : []
   );
 
-  const prevContentRef = useRef<string>('''');
+  const prevContentRef = useRef<string>('');
 
   // Overlay state
   const [showPageComment, setShowPageComment] = useState(false);
@@ -46,9 +46,9 @@ export function MobilePostDetail({ postId }: MobilePostDetailProps) {
   const [publishing, setPublishing] = useState(false);
 
   // Title is derived from the first line of content (UI-only, no separate title field in Postiz)
-  const rawContent = post?.value?.[0]?.content ?? '''';
+  const rawContent = post?.value?.[0]?.content ?? '';
   const lines = rawContent.split('\\n');
-  const title = lines[0]?.replace(/<[^>]+>/g, '''') ?? '''';
+  const title = lines[0]?.replace(/<[^>]+>/g, '') ?? '';
   const bodyContent = lines.slice(1).join('\\n') || rawContent;
 
   const media: PostMedia[] = post?.value?.[0]?.media ?? [];

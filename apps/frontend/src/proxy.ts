@@ -10,9 +10,32 @@ import {
 } from '@gitroom/react/translation/i18n.config';
 acceptLanguage.languages(languages);
 
+// Mobile UA-detection constants (merged from standalone middleware.ts)
+const MOBILE_REGEX = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i;
+const MOBILE_REDIRECT_PATHS = new Set<string>(['/', '/launches']);
+const MOBILE_TARGET = '/m/kalender';
+const COOKIE_MOBILE_OPTOUT = 'mobile_optout';
+
 // This function can be marked `async` if using `await` inside
 export async function proxy(request: NextRequest) {
   const nextUrl = request.nextUrl;
+
+  // Handle ?desktop=1 / ?mobile=1 opt-out switches
+  if (nextUrl.searchParams.has('desktop')) {
+    const res = NextResponse.next();
+    res.cookies.set(COOKIE_MOBILE_OPTOUT, '1', {
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+    });
+    return res;
+  }
+  if (nextUrl.searchParams.has('mobile')) {
+    const res = NextResponse.next();
+    res.cookies.delete(COOKIE_MOBILE_OPTOUT);
+    return res;
+  }
+
   const authCookie =
     request.cookies.get('auth') ||
     request.headers.get('auth') ||
@@ -157,6 +180,18 @@ export async function proxy(request: NextRequest) {
       }
       return redirect;
     }
+
+    // Mobile UA redirect — before desktop "/" → "/launches" redirect
+    if (
+      MOBILE_REDIRECT_PATHS.has(nextUrl.pathname) &&
+      request.cookies.get(COOKIE_MOBILE_OPTOUT)?.value !== '1'
+    ) {
+      const ua = request.headers.get('user-agent') || '';
+      if (MOBILE_REGEX.test(ua)) {
+        return NextResponse.redirect(new URL(MOBILE_TARGET, nextUrl.href));
+      }
+    }
+
     if (nextUrl.pathname === '/') {
       return NextResponse.redirect(
         new URL(
