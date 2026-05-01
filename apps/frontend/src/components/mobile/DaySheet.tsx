@@ -1,14 +1,14 @@
 'use client';
 
 import type { FC } from 'react';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import clsx from 'clsx';
 import { CalendarPostCard } from './CalendarPostCard';
 import type { MobileStatus } from '@gitroom/frontend/hooks/use-status-mapping';
 import { mapPostizState } from '@gitroom/frontend/hooks/use-status-mapping';
 import type { Integrations } from '@gitroom/frontend/components/launches/calendar.context';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
-import { useToaster } from '@gitroom/react/toaster/toaster';
+import { useCreatePost } from '@gitroom/frontend/hooks/use-post-mutate';
 
 interface PostEntry {
   id: string;
@@ -26,6 +26,7 @@ interface DaySheetProps {
   onClose: () => void;
   onPostPress: (id: string) => void;
   onAcceptProposal?: (id: string) => void;
+  onNewPost?: (date: string, integrationId: string) => Promise<void>;
 }
 
 export const DaySheet: FC<DaySheetProps> = ({
@@ -35,8 +36,10 @@ export const DaySheet: FC<DaySheetProps> = ({
   onClose,
   onPostPress,
   onAcceptProposal,
+  onNewPost,
 }) => {
-  const toaster = useToaster();
+  const { createPost } = useCreatePost();
+  const [creating, setCreating] = useState(false);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent) => {
@@ -57,9 +60,24 @@ export const DaySheet: FC<DaySheetProps> = ({
 
   const dayLabel = newDayjs(date).format('dddd, D. MMMM');
 
-  const handleNewPost = () => {
-    toaster.show('Phase 3 noch nicht da — Detail-Page kommt in Phase 3', 'warning');
-  };
+  const handleNewPost = useCallback(async () => {
+    if (!date || creating) return;
+    // Use first available integration as default; user can change in detail page.
+    const integrationId = integrations[0]?.id;
+    if (!integrationId) return;
+    setCreating(true);
+    try {
+      if (onNewPost) {
+        await onNewPost(date, integrationId);
+      } else {
+        const newId = await createPost(integrationId, date);
+        onPostPress(newId);
+        onClose();
+      }
+    } finally {
+      setCreating(false);
+    }
+  }, [date, creating, integrations, onNewPost, createPost, onPostPress, onClose]);
 
   return (
     <div
@@ -127,13 +145,15 @@ export const DaySheet: FC<DaySheetProps> = ({
           <button
             type="button"
             onClick={handleNewPost}
+            disabled={creating || !integrations.length}
             className={clsx(
               'w-full rounded-lg border border-dashed border-newBorder',
               'py-3 text-sm text-textItemBlur text-center',
-              'active:opacity-60 transition-opacity'
+              'active:opacity-60 transition-opacity',
+              (creating || !integrations.length) && 'opacity-40 cursor-not-allowed'
             )}
           >
-            + Neuer Post für diesen Tag
+            {creating ? 'Erstelle…' : '+ Neuer Post für diesen Tag'}
           </button>
         </div>
       </div>

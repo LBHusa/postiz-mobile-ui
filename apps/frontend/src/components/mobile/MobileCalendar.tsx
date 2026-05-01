@@ -17,6 +17,7 @@ import { MobileCalendarMonth } from './MobileCalendarMonth';
 import { MobileCalendarWeek } from './MobileCalendarWeek';
 import { DaySheet } from './DaySheet';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { useCreatePost } from '@gitroom/frontend/hooks/use-post-mutate';
 
 // Computes the ISO date range for a given reference date + view mode.
 function computeRange(refDate: string, view: 'month' | 'week') {
@@ -128,6 +129,7 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
   );
 
   const router = useRouter();
+  const { createPost } = useCreatePost();
 
   const handlePostPress = useCallback(
     (id: string) => {
@@ -136,8 +138,41 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
     [router]
   );
 
+  const handleNewPost = useCallback(
+    async (date: string, integrationId: string) => {
+      const newId = await createPost(integrationId, date);
+      setSelectedDate(null);
+      router.push(`/m/post/${newId}`);
+    },
+    [createPost, router]
+  );
+
+  const handleNewPostToday = useCallback(async () => {
+    const integrationId = integrations[0]?.id;
+    if (!integrationId) return;
+    const today = newDayjs().format('YYYY-MM-DD');
+    const newId = await createPost(integrationId, today);
+    router.push(`/m/post/${newId}`);
+  }, [integrations, createPost, router]);
+
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto relative">
+      {/* Floating Action Button — create new post for today */}
+      {integrations.length > 0 && (
+        <button
+          type="button"
+          data-testid="calendar-fab-new-post"
+          aria-label="Neuer Post"
+          onClick={handleNewPostToday}
+          className="fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-btnPrimary text-white shadow-lg flex items-center justify-center active:opacity-70 transition-opacity"
+          style={{ bottom: 'calc(64px + env(safe-area-inset-bottom) + 12px)' }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="10" y1="3" x2="10" y2="17" />
+            <line x1="3" y1="10" x2="17" y2="10" />
+          </svg>
+        </button>
+      )}
       {loading && (
         <div className="flex justify-center items-center py-8">
           <span className="text-xs text-textItemBlur">Laden…</span>
@@ -174,6 +209,7 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
         onClose={() => setSelectedDate(null)}
         onPostPress={handlePostPress}
         onAcceptProposal={acceptProposal}
+        onNewPost={handleNewPost}
       />
     </div>
   );
