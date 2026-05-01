@@ -11,6 +11,8 @@ import {
 import { useIntegrationList } from '@gitroom/frontend/components/launches/helpers/use.integration.list';
 import { useMobileCalendarConfig } from '@gitroom/frontend/hooks/use-mobile-calendar-config';
 import { useMobileProposals } from '@gitroom/frontend/hooks/use-mobile-proposals';
+import { useProposals } from '@gitroom/frontend/hooks/use-proposals';
+import { useProposalActions } from '@gitroom/frontend/hooks/use-proposal-actions';
 import { MobileCalendarMonth } from './MobileCalendarMonth';
 import { MobileCalendarWeek } from './MobileCalendarWeek';
 import { DaySheet } from './DaySheet';
@@ -81,6 +83,8 @@ function MobileCalendarContextPatch({
 function CalendarInner({ navStartDate }: { navStartDate: string }) {
   const { posts, integrations, loading } = useCalendar();
   const { proposals } = useMobileProposals();
+  const { mutate: mutateProposals } = useProposals('pending');
+  const { acceptProposal } = useProposalActions(mutateProposals);
   const { view } = useMobileCalendarConfig();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -169,6 +173,7 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
         integrations={integrations}
         onClose={() => setSelectedDate(null)}
         onPostPress={handlePostPress}
+        onAcceptProposal={acceptProposal}
       />
     </div>
   );

@@ -3,6 +3,7 @@
 import { type ReactNode, useCallback } from 'react';
 import useSWR from 'swr';
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
+import { usePathname } from 'next/navigation';
 import { ContextWrapper } from '@gitroom/frontend/components/layout/user.context';
 import { MantineWrapper } from '@gitroom/react/helpers/mantine.wrapper';
 import { Toaster } from '@gitroom/react/toaster/toaster';
@@ -10,6 +11,7 @@ import { CheckPayment } from '@gitroom/frontend/components/layout/check.payment'
 import { PreConditionComponent } from '@gitroom/frontend/components/layout/pre-condition.component';
 import { MobileShell } from '@gitroom/frontend/components/mobile/MobileShell';
 import { RegenContext, useRegenStateValue } from '@gitroom/frontend/hooks/use-regen-state';
+import { useProposals } from '@gitroom/frontend/hooks/use-proposals';
 import { useSearchParams } from 'next/navigation';
 import type { User } from '@prisma/client';
 
@@ -21,9 +23,19 @@ type ContextUser = User & {
   totalChannels: number;
 };
 
+const ROUTE_TITLES: Record<string, string> = {
+  '/m/kalender': 'Kalender',
+  '/m/vorschlaege': 'Vorschläge',
+  '/m/mehr': 'Mehr',
+};
+
 function MobileLayoutInner({ children, user, mutate }: { children: ReactNode; user: ContextUser; mutate: () => void }) {
   const searchParams = useSearchParams();
   const regenValue = useRegenStateValue();
+  const pathname = usePathname();
+  const { data: pendingProposals = [] } = useProposals('pending');
+
+  const title = ROUTE_TITLES[pathname] ?? '';
 
   return (
     <ContextWrapper user={user}>
@@ -32,7 +44,7 @@ function MobileLayoutInner({ children, user, mutate }: { children: ReactNode; us
         <RegenContext.Provider value={regenValue}>
           <CheckPayment check={searchParams.get('check') || ''} mutate={mutate}>
             <PreConditionComponent />
-            <MobileShell title="Kalender">{children}</MobileShell>
+            <MobileShell title={title} badgeCount={pendingProposals.length}>{children}</MobileShell>
           </CheckPayment>
         </RegenContext.Provider>
       </MantineWrapper>

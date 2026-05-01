@@ -25,6 +25,7 @@ interface DaySheetProps {
   integrations: Integrations[];
   onClose: () => void;
   onPostPress: (id: string) => void;
+  onAcceptProposal?: (id: string) => void;
 }
 
 export const DaySheet: FC<DaySheetProps> = ({
@@ -33,6 +34,7 @@ export const DaySheet: FC<DaySheetProps> = ({
   integrations,
   onClose,
   onPostPress,
+  onAcceptProposal,
 }) => {
   const toaster = useToaster();
 
@@ -96,16 +98,28 @@ export const DaySheet: FC<DaySheetProps> = ({
               (i) => i.id === post.integration.id
             );
             return (
-              <CalendarPostCard
-                key={post.id}
-                id={post.id}
-                status={status}
-                publishDate={post.publishDate}
-                content={post.content}
-                integrations={postIntegrations}
-                isProposal={post.isProposal}
-                onPress={onPostPress}
-              />
+              <div key={post.id} className="flex flex-col gap-1">
+                <CalendarPostCard
+                  id={post.id}
+                  status={status}
+                  publishDate={post.publishDate}
+                  content={post.content}
+                  integrations={postIntegrations}
+                  isProposal={post.isProposal}
+                  onPress={post.isProposal ? undefined : onPostPress}
+                />
+                {post.isProposal && onAcceptProposal && (
+                  <button
+                    type="button"
+                    data-testid="day-sheet-accept-proposal"
+                    data-proposal-id={post.id}
+                    onClick={() => onAcceptProposal(post.id)}
+                    className="w-full rounded-lg bg-btnPrimary text-white py-1.5 text-xs font-semibold active:opacity-80 transition-opacity"
+                  >
+                    Annehmen
+                  </button>
+                )}
+              </div>
             );
           })}
 

@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import { STORAGE_STATE_PATH } from './tests/auth-setup';
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: require.resolve('./tests/auth-setup'),
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,
@@ -10,6 +12,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
+    storageState: STORAGE_STATE_PATH,
   },
   projects: [
     {

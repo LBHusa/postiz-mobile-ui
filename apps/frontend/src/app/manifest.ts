@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Husatech Social',
-    short_name: 'HS',
-    description: 'Mobile Content-Planung fuer Husatech',
+    name: 'Postiz Mobile',
+    short_name: 'Postiz',
+    description: 'Mobile Content-Planung mit Postiz',
     start_url: '/m/kalender',
     scope: '/m/',
     id: '/m/',

@@ -112,6 +112,43 @@
 
 To have the project up and running, please follow the [Quick Start Guide](https://docs.postiz.com/quickstart)
 
+## Mobile-Layer Quick-Start
+
+The mobile PWA lives at `/m/kalender` and is designed for iPhone/Android home-screen use.
+
+**1. Start the dev server**
+
+```bash
+cp .env.example .env   # fill in DB_URL, REDIS_URL, and other required vars
+pnpm install
+pnpm run dev           # starts frontend on :4200, backend on :3000
+```
+
+**2. Log in**
+
+Open `http://localhost:4200/auth/login` in your browser and sign in with your account.
+
+**3. Navigate to the mobile layer**
+
+Open `http://localhost:4200/m/kalender` — or on a real device, point Safari/Chrome at your local IP:
+
+```
+http://<your-local-ip>:4200/m/kalender
+```
+
+Add to home screen (Safari: Share → Add to Home Screen) to get the full PWA experience with the custom status bar and icon.
+
+**4. Agent integration (optional)**
+
+To enable AI proposal generation and the regen flow, set these in `.env`:
+
+```
+NEXT_PUBLIC_HUSATECH_AGENT_BASE_URL=http://127.0.0.1:9100
+NEXT_PUBLIC_HUSATECH_AGENT_TOKEN=your-token-here
+```
+
+Without these, the calendar and post-detail screens work fully; the Proposals Inbox will show an empty state.
+
 ## Sponsor Postiz
 
 We now give a few options to Sponsor Postiz:
