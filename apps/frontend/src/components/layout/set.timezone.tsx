@@ -3,8 +3,10 @@ import dayjs, { ConfigType } from 'dayjs';
 import { FC, useEffect } from 'react';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
+import 'dayjs/locale/de';
 dayjs.extend(timezone);
 dayjs.extend(utc);
+dayjs.locale('de');
 
 const { utc: originalUtc } = dayjs;
 

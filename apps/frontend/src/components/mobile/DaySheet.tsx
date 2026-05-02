@@ -25,7 +25,7 @@ interface DaySheetProps {
   integrations: Integrations[];
   onClose: () => void;
   onPostPress: (id: string) => void;
-  onAcceptProposal?: (id: string) => void;
+  onAcceptProposal?: (id: string, publishDate: string) => void;
   onNewPost?: (date: string, integrationId: string) => Promise<void>;
 }
 
@@ -56,10 +56,6 @@ export const DaySheet: FC<DaySheetProps> = ({
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  if (!date) return null;
-
-  const dayLabel = newDayjs(date).format('dddd, D. MMMM');
-
   const handleNewPost = useCallback(async () => {
     if (!date || creating) return;
     // Use first available integration as default; user can change in detail page.
@@ -78,6 +74,10 @@ export const DaySheet: FC<DaySheetProps> = ({
       setCreating(false);
     }
   }, [date, creating, integrations, onNewPost, createPost, onPostPress, onClose]);
+
+  if (!date) return null;
+
+  const dayLabel = newDayjs(date).format('dddd, D. MMMM');
 
   return (
     <div
@@ -131,7 +131,7 @@ export const DaySheet: FC<DaySheetProps> = ({
                     type="button"
                     data-testid="day-sheet-accept-proposal"
                     data-proposal-id={post.id}
-                    onClick={() => onAcceptProposal(post.id)}
+                    onClick={() => onAcceptProposal(post.id, post.publishDate)}
                     className="w-full rounded-lg bg-btnPrimary text-white py-1.5 text-xs font-semibold active:opacity-80 transition-opacity"
                   >
                     Annehmen

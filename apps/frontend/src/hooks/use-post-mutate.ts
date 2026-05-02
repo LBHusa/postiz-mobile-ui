@@ -1,10 +1,11 @@
 'use client';
 
-import { useCallback, useContext } from 'react';
+import { useCallback } from "react";
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
-import { RegenContext } from '@gitroom/frontend/hooks/use-regen-state';
+import type { PostMedia } from '@gitroom/frontend/hooks/use-post-detail';
+import type { MobileStatus } from '@gitroom/frontend/hooks/use-status-mapping';
 
 /**
  * Standalone hook — creates a new draft post via POST /posts.
@@ -23,11 +24,11 @@ export function useCreatePost() {
             type: 'draft',
             date: newDayjs(date).utc().startOf('day').add(9, 'hour').format(),
             shortLink: false,
-            tags: [],
+            tags: [] as any[],
             posts: [
               {
                 integration: { id: integrationId },
-                value: [{ content: '', image: [] }],
+                value: [{ content: 'Entwurf', image: [] }],
                 settings: {},
               },
             ],
@@ -39,8 +40,9 @@ export function useCreatePost() {
         const data = await response.json();
         // Postiz returns the group object; first post id is in data.posts[0].id
         // or the group id itself — navigate by group id which the detail page accepts.
+        const first = Array.isArray(data) ? data[0] : data;
         const newId: string =
-          data?.id ?? data?.posts?.[0]?.id ?? data?.group ?? '';
+          first?.postId ?? first?.id ?? first?.posts?.[0]?.id ?? first?.group ?? '';
         if (!newId) throw new Error('createPost: no id in response');
         toaster.show('Entwurf erstellt', 'success');
         return newId;
@@ -58,7 +60,6 @@ export function useCreatePost() {
 export function usePostMutate(groupId: string, mutate: () => void) {
   const fetch = useFetch();
   const toaster = useToaster();
-  const { setRegenActive, setRegenDone } = useContext(RegenContext);
 
   const updateDate = useCallback(
     async (date: string) => {
@@ -85,41 +86,60 @@ export function usePostMutate(groupId: string, mutate: () => void) {
 
   const updateContent = useCallback(
     async (content: string): Promise<void> => {
-      // 1. Fetch current post-group to extract integration + post-value ids/media/settings
-      const groupRes = await fetch(`/posts/group/${groupId}`);
-      if (!groupRes.ok) {
+      // Fetch current post via /posts/:id (returns { group, posts: [{ id, content, image, settings, integration }] })
+      const res = await fetch(`/posts/${groupId}`);
+      if (!res.ok) {
         toaster.show('Fehler beim Laden des Posts', 'warning');
-        throw new Error(`updateContent: GET /posts/group/${groupId} → HTTP ${groupRes.status}`);
+        throw new Error(`updateContent: GET /posts/${groupId} → HTTP ${res.status}`);
       }
-      const groupData = await groupRes.json();
-      const posts: Array<{
-        id: string;
-        integration: { id: string };
-        value: Array<{ id: string; content: string; media: Array<{ id: string; path: string }> }>;
-        settings?: unknown;
-      }> = groupData?.posts ?? [];
-
-      if (posts.length === 0) {
+      const data = await res.json();
+      const rawPosts: Array<any> = Array.isArray(data?.posts) ? data.posts : [];
+      if (rawPosts.length === 0) {
         toaster.show('Fehler beim Laden des Posts', 'warning');
-        throw new Error('updateContent: no posts in group');
+        throw new Error('updateContent: no posts');
       }
 
-      const first = posts[0];
+      const first = rawPosts[0];
+      // Backend stores settings as JSON string with __type. Parse defensively.
+      let parsedSettings: any = {};
+      try {
+        parsedSettings = typeof first.settings === 'string' ? JSON.parse(first.settings) : (first.settings ?? {});
+      } catch {
+        parsedSettings = {};
+      }
+      // Ensure __type set from integration.providerIdentifier as fallback.
+      if (!parsedSettings.__type && first.integration?.providerIdentifier) {
+        parsedSettings.__type = first.integration.providerIdentifier;
+      }
+
       const updatePayload = {
         type: 'update',
-        date: groupData?.publishDate ?? new Date().toISOString(),
-        shortLink: groupData?.shortLink ?? false,
-        tags: groupData?.tags ?? [],
-        posts: posts.map((p) => ({
-          integration: { id: p.integration.id },
-          value: p.value.map((v, idx) => ({
-            id: v.id,
-            // Only update content on the first value of the first (canonical) post
-            content: p.id === first.id && idx === 0 ? content : v.content,
-            image: v.media ?? [],
-          })),
-          settings: p.settings ?? {},
-        })),
+        date: first.publishDate ?? new Date().toISOString(),
+        shortLink: false,
+        tags: [] as any[],
+        posts: rawPosts.map((p: any, pi: number) => {
+          let pSettings: any = {};
+          try {
+            pSettings = typeof p.settings === 'string' ? JSON.parse(p.settings) : (p.settings ?? {});
+          } catch {
+            pSettings = {};
+          }
+          if (!pSettings.__type && p.integration?.providerIdentifier) {
+            pSettings.__type = p.integration.providerIdentifier;
+          }
+          return {
+            group: p.group ?? data?.group ?? '',
+            integration: { id: p.integration?.id },
+            value: [
+              {
+                id: p.id,
+                content: pi === 0 ? content : (p.content ?? ''),
+                image: Array.isArray(p.image) ? p.image : [],
+              },
+            ],
+            settings: pSettings,
+          };
+        }),
       };
 
       const updateRes = await fetch('/posts', {
@@ -136,71 +156,272 @@ export function usePostMutate(groupId: string, mutate: () => void) {
     [groupId, fetch, mutate, toaster]
   );
 
-  // Schedule a draft post at its current publishDate.
-  const schedulePost = useCallback(
-    async (date: string) => {
-      try {
-        const response = await fetch(`/posts/${groupId}/date`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            date: newDayjs(date).utc().format(),
-            action: 'schedule',
-          }),
-        });
-        if (!response.ok) {
-          throw new Error(`schedulePost failed: HTTP ${response.status}`);
-        }
-        mutate();
-        toaster.show('Post eingeplant', 'success');
-      } catch (e) {
-        toaster.show('Fehler beim Einplanen', 'warning');
-        throw e;
+  const updateMedia = useCallback(
+    async (images: PostMedia[]) => {
+      const res = await fetch(`/posts/${groupId}`);
+      if (!res.ok) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error(`updateMedia: GET /posts/${groupId} → HTTP ${res.status}`);
       }
+      const data = await res.json();
+      const rawPosts: Array<any> = Array.isArray(data?.posts) ? data.posts : [];
+      if (rawPosts.length === 0) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error('updateMedia: no posts');
+      }
+
+      const updatePayload = {
+        type: 'update',
+        date: rawPosts[0].publishDate ?? new Date().toISOString(),
+        shortLink: false,
+        tags: [] as any[],
+        posts: rawPosts.map((p: any) => {
+          let pSettings: any = {};
+          try {
+            pSettings = typeof p.settings === 'string' ? JSON.parse(p.settings) : (p.settings ?? {});
+          } catch {
+            pSettings = {};
+          }
+          if (!pSettings.__type && p.integration?.providerIdentifier) {
+            pSettings.__type = p.integration.providerIdentifier;
+          }
+          return {
+            group: p.group ?? data?.group ?? '',
+            integration: { id: p.integration?.id },
+            value: [
+              {
+                id: p.id,
+                content: p.content ?? '',
+                image: images,
+              },
+            ],
+            settings: pSettings,
+          };
+        }),
+      };
+
+      const updateRes = await fetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify(updatePayload),
+      });
+      if (!updateRes.ok) {
+        toaster.show('Fehler beim Speichern der Medien', 'warning');
+        throw new Error(`updateMedia: POST /posts → HTTP ${updateRes.status}`);
+      }
+      mutate();
+      toaster.show('Medien gespeichert', 'success');
     },
     [groupId, fetch, mutate, toaster]
   );
 
-  const triggerRegen = useCallback(
-    async (postId: string, feedback?: string) => {
-      const agentBase = process.env.NEXT_PUBLIC_POSTIZ_AGENT_BASE_URL;
-      const agentToken = process.env.NEXT_PUBLIC_POSTIZ_AGENT_TOKEN;
+  const updateStatus = useCallback(
+    async (mobileStatus: MobileStatus): Promise<void> => {
+      // online and failed are system-managed — cannot be set by user
+      if (mobileStatus === "online" || mobileStatus === "failed") return;
+      // scheduled is only set via the Planen button (with an explicit future date) — no-op here
+      if (mobileStatus === "scheduled") return;
 
-      if (!agentBase) {
-        toaster.show('Agent-URL nicht konfiguriert', 'warning');
-        return;
+      // All remaining states (draft, idea, re_gen, approved, proposal) map to DRAFT in Postiz
+      const res = await fetch(`/posts/${groupId}`);
+      if (!res.ok) {
+        toaster.show("Fehler beim Laden des Posts", "warning");
+        throw new Error(`updateStatus: GET /posts/${groupId} → HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const rawPosts: Array<any> = Array.isArray(data?.posts) ? data.posts : [];
+      if (rawPosts.length === 0) {
+        toaster.show("Fehler beim Laden des Posts", "warning");
+        throw new Error("updateStatus: no posts");
       }
 
-      toaster.show('KI arbeitet…', 'success');
-      setRegenActive(postId);
-
+      const first = rawPosts[0];
+      let parsedSettings: any = {};
       try {
-        const body: Record<string, string> = { post_id: postId };
-        if (feedback) body.feedback = feedback;
-
-        const res = await globalThis.fetch(`${agentBase}/regen`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${agentToken ?? ''}`,
-          },
-          body: JSON.stringify(body),
-        });
-
-        if (!res.ok) {
-          throw new Error(`Agent responded ${res.status}`);
-        }
-
-        mutate();
-        toaster.show('KI fertig — Post aktualisiert', 'success');
-      } catch (err) {
-        toaster.show('KI-Fehler — bitte erneut versuchen', 'warning');
-        throw err;
-      } finally {
-        setRegenDone();
+        parsedSettings = typeof first.settings === "string" ? JSON.parse(first.settings) : (first.settings ?? {});
+      } catch {
+        parsedSettings = {};
       }
+      if (!parsedSettings.__type && first.integration?.providerIdentifier) {
+        parsedSettings.__type = first.integration.providerIdentifier;
+      }
+
+      const payload = {
+        type: "draft" as const,
+        date: first.publishDate ?? new Date().toISOString(),
+        shortLink: false,
+        tags: [] as any[],
+        posts: rawPosts.map((p: any) => {
+          let pSettings: any = {};
+          try {
+            pSettings = typeof p.settings === "string" ? JSON.parse(p.settings) : (p.settings ?? {});
+          } catch {
+            pSettings = {};
+          }
+          if (!pSettings.__type && p.integration?.providerIdentifier) {
+            pSettings.__type = p.integration.providerIdentifier;
+          }
+          return {
+            group: p.group ?? data?.group ?? "",
+            integration: { id: p.integration?.id },
+            value: [
+              {
+                id: p.id,
+                content: p.content ?? "",
+                image: Array.isArray(p.image) ? p.image : [],
+              },
+            ],
+            settings: pSettings,
+          };
+        }),
+      };
+
+      const updateRes = await fetch("/posts", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      if (!updateRes.ok) {
+        toaster.show("Fehler beim Speichern des Status", "warning");
+        throw new Error(`updateStatus: POST /posts → HTTP ${updateRes.status}`);
+      }
+      toaster.show("Status gespeichert", "success");
+      mutate();
     },
-    [mutate, toaster, setRegenActive, setRegenDone]
+    [groupId, fetch, mutate, toaster]
   );
 
-  return { updateDate, updateContent, schedulePost, triggerRegen };
+  // Schedule a post (DRAFT or QUEUE) at the given date → sets state to QUEUE.
+  // Uses POST /posts with type:'schedule' which always sets state=QUEUE regardless of current state.
+  // PUT /posts/:id/date with action:'schedule' is a no-op for DRAFT posts (backend bug).
+  const schedulePost = useCallback(
+    async (date: string) => {
+      // Sicherheits-Check: KEIN Schedule auf Vergangenheits-Datum (Postiz-Workflow published sonst sofort).
+      const targetMs = new Date(date).getTime();
+      if (Number.isNaN(targetMs) || targetMs <= Date.now() + 60_000) {
+        toaster.show(
+          'Datum liegt in Vergangenheit (oder zu nah an jetzt). Schedule abgelehnt.',
+          'warning'
+        );
+        throw new Error('schedulePost: date must be at least 1 minute in the future');
+      }
+      const res = await fetch(`/posts/${groupId}`);
+      if (!res.ok) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error(`schedulePost: GET /posts/${groupId} → HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const rawPosts: Array<any> = Array.isArray(data?.posts) ? data.posts : [];
+      if (rawPosts.length === 0) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error('schedulePost: no posts');
+      }
+
+      const scheduledDate = newDayjs(date).utc().format();
+
+      const payload = {
+        type: 'schedule' as const,
+        date: scheduledDate,
+        shortLink: false,
+        tags: [] as any[],
+        posts: rawPosts.map((p: any) => {
+          let pSettings: any = {};
+          try {
+            pSettings = typeof p.settings === 'string' ? JSON.parse(p.settings) : (p.settings ?? {});
+          } catch {
+            pSettings = {};
+          }
+          if (!pSettings.__type && p.integration?.providerIdentifier) {
+            pSettings.__type = p.integration.providerIdentifier;
+          }
+          return {
+            group: p.group ?? data?.group ?? '',
+            integration: { id: p.integration?.id },
+            value: [
+              {
+                id: p.id,
+                content: p.content ?? '',
+                image: Array.isArray(p.image) ? p.image : [],
+              },
+            ],
+            settings: pSettings,
+          };
+        }),
+      };
+
+      const updateRes = await fetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!updateRes.ok) {
+        toaster.show('Fehler beim Einplanen', 'warning');
+        throw new Error(`schedulePost: POST /posts → HTTP ${updateRes.status}`);
+      }
+      toaster.show('Post eingeplant', 'success');
+      mutate();
+    },
+    [groupId, fetch, mutate, toaster]
+  );
+
+  // Re-Gen wurde entfernt — Workflow läuft autonom als content-publishing Skill auf Server 77.
+  const triggerRegen = useCallback(
+    async (_postId: string, _feedback?: string) => {
+      toaster.show('Re-Gen läuft autonom auf dem Server', 'success');
+    },
+    [toaster]
+  );
+
+  // Persistiert Notiz-Feld (Postiz description-Spalte). Geht via type='update' Endpoint.
+  // Wird vom content-publishing Skill auf Server 77 als Hinweis (z.B. KI-Vorlage) gelesen.
+  const updateDescription = useCallback(
+    async (description: string): Promise<void> => {
+      const res = await fetch(`/posts/${groupId}`);
+      if (!res.ok) {
+        toaster.show('Fehler beim Laden des Posts', 'warning');
+        throw new Error(`updateDescription: GET /posts/${groupId} → HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const rawPosts: Array<any> = Array.isArray(data?.posts) ? data.posts : [];
+      if (rawPosts.length === 0) return;
+      const first = rawPosts[0];
+      let parsedSettings: any = {};
+      try {
+        parsedSettings = typeof first.settings === 'string' ? JSON.parse(first.settings) : (first.settings ?? {});
+      } catch {
+        parsedSettings = {};
+      }
+      if (!parsedSettings.__type && first.integration?.providerIdentifier) {
+        parsedSettings.__type = first.integration.providerIdentifier;
+      }
+      const payload = {
+        type: 'update',
+        date: first.publishDate ?? new Date().toISOString(),
+        shortLink: false,
+        description,
+        tags: [] as any[],
+        posts: rawPosts.map((p: any) => ({
+          group: p.group ?? data?.group ?? '',
+          integration: { id: p.integration?.id },
+          value: [
+            {
+              id: p.id,
+              content: p.content ?? '',
+              image: Array.isArray(p.image) ? p.image : [],
+            },
+          ],
+          settings: parsedSettings,
+        })),
+      };
+      const updateRes = await fetch('/posts', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!updateRes.ok) {
+        toaster.show('Fehler beim Speichern der Notiz', 'warning');
+        throw new Error(`updateDescription: POST /posts → HTTP ${updateRes.status}`);
+      }
+      mutate();
+    },
+    [groupId, fetch, mutate, toaster]
+  );
+
+  return { updateDate, updateContent, updateMedia, updateStatus, updateDescription, schedulePost, triggerRegen };
 }

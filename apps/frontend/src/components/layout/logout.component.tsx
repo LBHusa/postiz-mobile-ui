@@ -16,9 +16,9 @@ export const LogoutComponent: FC<{ isIcon?: boolean }> = ({ isIcon }) => {
       await deleteDialog(
         t(
           'are_you_sure_you_want_to_logout',
-          'Are you sure you want to logout?'
+          'Wirklich abmelden?'
         ),
-        t('yes_logout', 'Yes logout')
+        t('yes_logout', 'Ja, abmelden')
       )
     ) {
       if (!isSecured) {

@@ -2,8 +2,7 @@
 
 import { useCallback } from 'react';
 import useSWR from 'swr';
-import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
-import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
+import { useToaster } from '@gitroom/react/toaster/toaster';
 
 export interface PostComment {
   id: string;
@@ -15,39 +14,31 @@ export interface PostComment {
   user?: { name: string; picture: string };
 }
 
-export function useComments(publishDate: string) {
-  const fetch = useFetch();
-  const dateKey = newDayjs(publishDate).utc().format('YYYY-MM-DDTHH:mm:00');
+// V2 stub: no backend comment endpoint exists in Postiz V1.
+export function useComments(_publishDate: string) {
+  const toaster = useToaster();
 
-  const load = useCallback(async () => {
-    const data = await (await fetch(`/comments/${dateKey}`)).json();
-    return (data ?? []) as PostComment[];
-  }, [dateKey]);
-
-  const { data: comments = [], mutate } = useSWR(`/comments-${dateKey}`, load, {
+  const { data: comments = [] } = useSWR<PostComment[]>('comments-v2-stub', async () => [], {
     revalidateOnFocus: false,
     refreshWhenOffline: false,
     refreshWhenHidden: false,
   });
 
   const addComment = useCallback(
-    async (content: string, type: PostComment['type'] = 'page', mediaId?: string) => {
-      await fetch('/comments', {
-        method: 'POST',
-        body: JSON.stringify({ content, date: dateKey, type, mediaId }),
-      });
-      mutate();
+    async (_content: string, _type: PostComment['type'] = 'page', _mediaId?: string) => {
+      toaster.show('Kommentare folgen in V2', 'warning');
     },
-    [dateKey, fetch, mutate]
+    [toaster]
   );
 
   const deleteComment = useCallback(
-    async (commentId: string) => {
-      await fetch(`/comments/${commentId}`, { method: 'DELETE' });
-      mutate();
+    async (_commentId: string) => {
+      toaster.show('Kommentare folgen in V2', 'warning');
     },
-    [fetch, mutate]
+    [toaster]
   );
+
+  const mutate = useCallback(() => {}, []);
 
   return { comments, addComment, deleteComment, mutate };
 }

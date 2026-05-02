@@ -64,7 +64,10 @@ export class PostsController {
   }
 
   @Post('/should-shortlink')
-  async shouldShortlink(@Body() body: { messages: string[] }) {
+  async shouldShortlink(
+    @GetOrgFromRequest() _org: Organization,
+    @Body() body: { messages: string[] }
+  ) {
     return { ask: this._shortLinkService.askShortLinkedin(body.messages) };
   }
 

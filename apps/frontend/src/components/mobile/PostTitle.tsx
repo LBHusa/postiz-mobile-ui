@@ -18,18 +18,21 @@ export const PostTitle: FC<PostTitleProps> = ({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const escapedRef = useRef(false);
 
   const handleTap = useCallback(() => {
     setDraft(value);
+    escapedRef.current = false;
     setEditing(true);
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [value]);
 
   const handleBlur = useCallback(() => {
     setEditing(false);
-    if (draft.trim() !== value) {
+    if (!escapedRef.current && draft.trim() !== value) {
       onChange(draft.trim());
     }
+    escapedRef.current = false;
   }, [draft, value, onChange]);
 
   const handleKeyDown = useCallback(
@@ -39,6 +42,7 @@ export const PostTitle: FC<PostTitleProps> = ({
         inputRef.current?.blur();
       }
       if (e.key === 'Escape') {
+        escapedRef.current = true;
         setDraft(value);
         setEditing(false);
       }

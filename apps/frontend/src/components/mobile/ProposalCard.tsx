@@ -8,9 +8,9 @@ import type { Proposal } from '@gitroom/frontend/hooks/use-proposals';
 
 interface ProposalCardProps {
   proposal: Proposal;
-  onAccept: (id: string) => void;
+  onAccept: (proposal: Proposal) => void;
   onRegenerate: (id: string, feedback: string) => void;
-  onReject: (id: string) => void;
+  onReject: (group: string) => void;
 }
 
 export const ProposalCard: FC<ProposalCardProps> = ({
@@ -142,7 +142,7 @@ export const ProposalCard: FC<ProposalCardProps> = ({
               <button
                 type="button"
                 data-testid="proposal-accept"
-                onClick={() => onAccept(proposal.id)}
+                onClick={() => onAccept(proposal)}
                 className="flex-1 rounded-lg bg-btnPrimary text-white py-2 text-xs font-semibold active:opacity-80 transition-opacity"
               >
                 ✓ Annehmen
@@ -158,7 +158,7 @@ export const ProposalCard: FC<ProposalCardProps> = ({
               <button
                 type="button"
                 data-testid="proposal-reject"
-                onClick={() => onReject(proposal.id)}
+                onClick={() => onReject(proposal.group)}
                 className="px-3 rounded-lg border border-newBorder bg-newBgColor text-xs text-textItemBlur py-2 active:opacity-60 transition-opacity"
               >
                 ✕

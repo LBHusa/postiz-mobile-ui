@@ -25,6 +25,17 @@ export function useMediaUpload() {
           method: 'POST',
           body: formData,
         });
+        if (!res.ok) {
+          let message = 'Upload fehlgeschlagen';
+          try {
+            const err = await res.json();
+            if (err?.message) message = err.message;
+          } catch {
+            // ignore json parse failure
+          }
+          toaster.show(message, 'warning');
+          return null;
+        }
         const data = await res.json();
         toaster.show('Datei hochgeladen', 'success');
         return data as UploadedMedia;

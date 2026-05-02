@@ -8,7 +8,7 @@ export const AdaptForButton: FC = () => {
   const toaster = useToaster();
 
   const handleTap = useCallback(() => {
-    toaster.show('Plattform-Anpassung kommt in Phase 5', 'warning');
+    toaster.show('Plattform-Anpassung läuft autonom auf dem Server', 'success');
   }, [toaster]);
 
   return (

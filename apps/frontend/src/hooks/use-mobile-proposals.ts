@@ -5,6 +5,7 @@ import { useProposals } from '@gitroom/frontend/hooks/use-proposals';
 
 export interface MobileProposal {
   id: string;
+  group: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   title: string;
@@ -19,6 +20,7 @@ export function useMobileProposals() {
     () =>
       proposals.map((p) => ({
         id: p.id,
+        group: p.group,
         date: p.suggested_date,
         time: p.suggested_time,
         title: p.title,

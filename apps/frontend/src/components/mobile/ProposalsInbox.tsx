@@ -1,8 +1,9 @@
 'use client';
 
 import type { FC } from 'react';
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useProposals } from '@gitroom/frontend/hooks/use-proposals';
+import type { Proposal } from '@gitroom/frontend/hooks/use-proposals';
 import { useProposalActions } from '@gitroom/frontend/hooks/use-proposal-actions';
 import { ProposalCard } from './ProposalCard';
 import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
@@ -14,6 +15,16 @@ interface ProposalsInboxProps {
 export const ProposalsInbox: FC<ProposalsInboxProps> = ({ onGeneratePress }) => {
   const { data: proposals = [], mutate, isLoading } = useProposals('pending');
   const { acceptProposal, regenerateProposal, rejectProposal } = useProposalActions(mutate);
+
+  const handleAccept = useCallback(
+    (proposal: Proposal) => acceptProposal(proposal.group, `${proposal.suggested_date}T${proposal.suggested_time}`),
+    [acceptProposal]
+  );
+
+  const handleReject = useCallback(
+    (group: string) => rejectProposal(group),
+    [rejectProposal]
+  );
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof proposals>();
@@ -91,9 +102,9 @@ export const ProposalsInbox: FC<ProposalsInboxProps> = ({ onGeneratePress }) => 
                     <ProposalCard
                       key={proposal.id}
                       proposal={proposal}
-                      onAccept={acceptProposal}
+                      onAccept={handleAccept}
                       onRegenerate={regenerateProposal}
-                      onReject={rejectProposal}
+                      onReject={handleReject}
                     />
                   ))}
                 </div>

@@ -82,11 +82,16 @@ function MobileCalendarContextPatch({
 
 // Inner component that consumes the (patched) CalendarContext.
 function CalendarInner({ navStartDate }: { navStartDate: string }) {
-  const { posts, integrations, loading } = useCalendar();
+  const { posts, integrations, loading, reloadCalendarView } = useCalendar();
   const { proposals } = useMobileProposals();
   const { mutate: mutateProposals } = useProposals('pending');
   const { acceptProposal } = useProposalActions(mutateProposals);
   const { view } = useMobileCalendarConfig();
+
+  const handleAcceptProposal = useCallback(
+    (group: string, publishDate: string) => acceptProposal(group, publishDate),
+    [acceptProposal]
+  );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   // Mark render complete for AC14 Playwright performance measurement.
@@ -115,7 +120,7 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
 
   const selectedDayProposals = selectedDate
     ? proposals.filter((pr) => pr.date === selectedDate).map((pr) => ({
-        id: pr.id,
+        id: pr.group,
         publishDate: `${pr.date}T${pr.time}:00`,
         content: pr.title,
         state: 'PROPOSAL',
@@ -142,9 +147,10 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
     async (date: string, integrationId: string) => {
       const newId = await createPost(integrationId, date);
       setSelectedDate(null);
+      reloadCalendarView();
       router.push(`/m/post/${newId}`);
     },
-    [createPost, router]
+    [createPost, router, reloadCalendarView]
   );
 
   const handleNewPostToday = useCallback(async () => {
@@ -152,8 +158,9 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
     if (!integrationId) return;
     const today = newDayjs().format('YYYY-MM-DD');
     const newId = await createPost(integrationId, today);
+    reloadCalendarView();
     router.push(`/m/post/${newId}`);
-  }, [integrations, createPost, router]);
+  }, [integrations, createPost, router, reloadCalendarView]);
 
   return (
     <div className="flex-1 overflow-y-auto relative">
@@ -208,7 +215,7 @@ function CalendarInner({ navStartDate }: { navStartDate: string }) {
         integrations={integrations}
         onClose={() => setSelectedDate(null)}
         onPostPress={handlePostPress}
-        onAcceptProposal={acceptProposal}
+        onAcceptProposal={handleAcceptProposal}
         onNewPost={handleNewPost}
       />
     </div>

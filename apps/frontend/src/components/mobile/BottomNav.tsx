@@ -28,7 +28,7 @@ const tabs = [
     ),
   },
   {
-    label: 'Vorschlaege',
+    label: 'Vorschläge',
     href: '/m/vorschlaege',
     showBadge: true,
     icon: (active: boolean) => (

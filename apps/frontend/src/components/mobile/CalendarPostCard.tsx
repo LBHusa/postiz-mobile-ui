@@ -31,7 +31,8 @@ export const CalendarPostCard: FC<CalendarPostCardProps> = ({
   const { getConfig } = useStatusMapping();
   const config = getConfig(status);
   const time = newDayjs(publishDate).format('HH:mm');
-  const snippet = content.length > 60 ? content.slice(0, 60) + '…' : content;
+  const plainText = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  const snippet = plainText.length > 60 ? plainText.slice(0, 60) + '…' : plainText;
 
   return (
     <button

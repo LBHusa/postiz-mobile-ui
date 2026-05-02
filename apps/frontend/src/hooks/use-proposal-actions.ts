@@ -1,78 +1,63 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { useToaster } from '@gitroom/react/toaster/toaster';
+import { newDayjs } from '@gitroom/frontend/components/layout/set.timezone';
 
 export function useProposalActions(mutate: () => void) {
+  const fetch = useFetch();
   const toaster = useToaster();
-  const agentBase = process.env.NEXT_PUBLIC_POSTIZ_AGENT_BASE_URL ?? '';
-  const agentToken = process.env.NEXT_PUBLIC_POSTIZ_AGENT_TOKEN ?? '';
-
-  const post = useCallback(
-    async (path: string, body?: object) => {
-      const res = await globalThis.fetch(`${agentBase}${path}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${agentToken}`,
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-      if (!res.ok) throw new Error(`Agent ${path} responded ${res.status}`);
-    },
-    [agentBase, agentToken]
-  );
 
   const acceptProposal = useCallback(
-    async (id: string) => {
+    async (group: string, publishDate: string) => {
       try {
-        await post(`/proposals/${id}/accept`);
+        const res = await fetch(`/posts/${group}/date`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            date: newDayjs(publishDate).utc().format(),
+            action: 'schedule',
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        toaster.show('Vorschlag angenommen', 'success');
         mutate();
-        toaster.show('Vorschlag angenommen — Entwurf erstellt', 'success');
       } catch {
         toaster.show('Fehler beim Annehmen', 'warning');
       }
     },
-    [post, mutate, toaster]
-  );
-
-  const regenerateProposal = useCallback(
-    async (id: string, feedback: string) => {
-      try {
-        await post(`/proposals/${id}/regenerate`, { feedback });
-        mutate();
-        toaster.show('Neu generiert', 'success');
-      } catch {
-        toaster.show('Fehler beim Neu-Generieren', 'warning');
-      }
-    },
-    [post, mutate, toaster]
+    [fetch, toaster, mutate]
   );
 
   const rejectProposal = useCallback(
-    async (id: string) => {
+    async (group: string) => {
       try {
-        await post(`/proposals/${id}/reject`);
+        const res = await fetch(`/posts/${group}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        toaster.show('Vorschlag abgelehnt', 'success');
         mutate();
-        toaster.show('Vorschlag verworfen', 'success');
       } catch {
-        toaster.show('Fehler beim Verwerfen', 'warning');
+        toaster.show('Fehler beim Ablehnen', 'warning');
       }
     },
-    [post, mutate, toaster]
+    [fetch, toaster, mutate]
+  );
+
+  const regenerateProposal = useCallback(
+    async (_id: string, _feedback: string) => {
+      toaster.show('Neu-Generierung läuft autonom auf dem Server', 'success');
+    },
+    [toaster]
   );
 
   const generateProposals = useCallback(
-    async (weeksAhead: number, options: { avoidExisting: boolean; ensureDiversity: boolean; preferUnusedPillars: boolean }) => {
-      try {
-        await post('/proposals/generate', { weeks_ahead: weeksAhead, options });
-        mutate();
-        toaster.show(`${weeksAhead * 4} Vorschläge werden generiert…`, 'success');
-      } catch {
-        toaster.show('Fehler beim Generieren', 'warning');
-      }
+    async (
+      _weeksAhead: number,
+      _options: { avoidExisting: boolean; ensureDiversity: boolean; preferUnusedPillars: boolean }
+    ) => {
+      toaster.show('Vorschläge werden vom Server-Skill autonom geschrieben', 'success');
     },
-    [post, mutate, toaster]
+    [toaster]
   );
 
   return { acceptProposal, regenerateProposal, rejectProposal, generateProposals };
